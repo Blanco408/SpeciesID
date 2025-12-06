@@ -1,12 +1,46 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if false;
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isValidSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // Observation Photos
+    match /observations/{observationId}/photos/{photoId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidSize() && isImage();
+      allow delete: if isAuthenticated();
+    }
+    
+    // Regional ML Models (Read-only)
+    match /models/{regionId}/{modelFile} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+    
+    // Species Reference Images (Read-only)
+    match /species/{speciesId}/{imageFile} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+    
+    // User Profile Images
+    match /users/{userId}/profile/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() 
+                   && request.auth.uid == userId
+                   && isValidSize()
+                   && isImage();
     }
   }
 }

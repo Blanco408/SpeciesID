@@ -1,18 +1,82 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 1, 5);
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) &&
+                       hasRequiredFields(['email', 'display_name', 'date_created']);
+      allow update: if isOwner(userId) &&
+                       request.resource.data.email == resource.data.email;
+      allow delete: if false;
+    }
+    
+    // Observations Collection
+    match /observations/{observationId} {
+      allow read: if isAuthenticated() && 
+                     resource.data.user_id == request.auth.uid;
+      allow create: if isAuthenticated() &&
+                       request.resource.data.user_id == request.auth.uid &&
+                       hasRequiredFields(['user_id', 'coordinates', 'identifications', 'sync_status', 'last_modified']);
+      allow update: if isAuthenticated() &&
+                       resource.data.user_id == request.auth.uid &&
+                       request.resource.data.user_id == resource.data.user_id;
+      allow delete: if isAuthenticated() &&
+                       resource.data.user_id == request.auth.uid;
+      
+      // Photos subcollection
+      match /photos/{photoId} {
+        allow read: if isAuthenticated() &&
+                       get(/databases/$(database)/documents/observations/$(observationId)).data.user_id == request.auth.uid;
+        allow create, update: if isAuthenticated() &&
+                                  get(/databases/$(database)/documents/observations/$(observationId)).data.user_id == request.auth.uid;
+        allow delete: if isAuthenticated() &&
+                         get(/databases/$(database)/documents/observations/$(observationId)).data.user_id == request.auth.uid;
+      }
+    }
+    
+    // Species Collection (Read-only for users)
+    match /species/{speciesId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Regions Collection (Read-only for users)
+    match /regions/{regionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Admins Collection
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    
+    // App Config
+    match /config/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }
