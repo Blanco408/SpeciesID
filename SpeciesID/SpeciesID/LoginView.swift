@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct LoginView: View {
+    @Binding var isLoggedIn: Bool
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var showEmailLogin: Bool = false
@@ -55,6 +56,7 @@ struct LoginView: View {
                     loginButton("Gmail Login", action: handleGoogleSignIn)
                     loginButton("Apple Login", action: handleAppleSignIn)
                     loginButton("Default Login", action: { showEmailLogin = true })
+                    guestLoginButton()
                 }
                 .padding(.horizontal, 32)
                 .padding(.bottom, 20)
@@ -96,11 +98,30 @@ struct LoginView: View {
         .disabled(isLoading)
     }
     
+    private func guestLoginButton() -> some View {
+        Button(action: handleGuestSignIn) {
+            Text("Sign in as Guest")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(Color.clear)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                )
+                .contentShape(Rectangle())
+        }
+        .disabled(isLoading)
+    }
+    
     private func handleGoogleSignIn() {
         isLoading = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             isLoading = false
             print("Gmail Sign In tapped (stubbed)")
+            // Set logged in state to navigate to homepage
+            isLoggedIn = true
         }
     }
     
@@ -109,6 +130,8 @@ struct LoginView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             isLoading = false
             print("Apple Sign In tapped (stubbed)")
+            // Set logged in state to navigate to homepage
+            isLoggedIn = true
         }
     }
     
@@ -118,6 +141,18 @@ struct LoginView: View {
             isLoading = false
             showEmailLogin = false
             print("Email Sign In tapped (stubbed)")
+            // Set logged in state to navigate to homepage
+            isLoggedIn = true
+        }
+    }
+    
+    private func handleGuestSignIn() {
+        // Guest login is immediate - no loading state needed
+        print("Guest Sign In tapped")
+        // Set logged in state to navigate to homepage
+        // Use a small delay to ensure state update is processed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.isLoggedIn = true
         }
     }
 }
@@ -174,6 +209,6 @@ struct EmailLoginView: View {
 }
 
 #Preview {
-    LoginView()
+    LoginView(isLoggedIn: .constant(false))
 }
 
