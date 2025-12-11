@@ -34,10 +34,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct SpeciesIDApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @AppStorage("isLoggedIn") private var isLoggedIn: Bool = false
     
     var body: some Scene {
         WindowGroup {
-            LoginView()
+            if isLoggedIn {
+                HomeView(isLoggedIn: $isLoggedIn)
+            } else {
+                LoginView(isLoggedIn: $isLoggedIn)
+            }
         }
     }
 }
