@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import CoreLocation
 import Combine
+import AVFoundation
 
 struct CameraView: View {
     @Environment(\.dismiss) var dismiss
@@ -10,6 +11,7 @@ struct CameraView: View {
     @State private var selectedImage: UIImage?
     @State private var showImagePicker = false
     @State private var showCamera = false
+    @State private var showCameraUnavailable = false
     @State private var notes = ""
     @State private var isSaving = false
     @State private var showSaved = false
@@ -45,7 +47,7 @@ struct CameraView: View {
 
                 // Capture buttons
                 HStack(spacing: 16) {
-                    Button(action: { showCamera = true }) {
+                    Button(action: openCamera) {
                         Label("Camera", systemImage: "camera.fill")
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
@@ -119,9 +121,40 @@ struct CameraView: View {
             } message: {
                 Text("Observation saved locally.")
             }
+            .alert("Camera Unavailable", isPresented: $showCameraUnavailable) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Camera is not available. Try using the photo library instead.")
+            }
             .onAppear {
                 locationManager.requestPermission()
             }
+        }
+    }
+
+    private func openCamera() {
+        // Check if camera is available (not on simulator)
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            showCameraUnavailable = true
+            return
+        }
+
+        // Check camera permission
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            showCamera = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        showCamera = true
+                    } else {
+                        showCameraUnavailable = true
+                    }
+                }
+            }
+        default:
+            showCameraUnavailable = true
         }
     }
 
@@ -196,14 +229,35 @@ struct CameraCapture: UIViewControllerRepresentable {
     @Binding var image: UIImage?
     @Environment(\.dismiss) var dismiss
 
-    func makeUIViewController(context: Context) -> UIImagePickerController {
+    static var isAvailable: Bool {
+        UIImagePickerController.isSourceTypeAvailable(.camera)
+    }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        // Check camera availability
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            let alert = UIAlertController(
+                title: "Camera Unavailable",
+                message: "Camera is not available on this device.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                self.dismiss()
+            })
+            let vc = UIViewController()
+            DispatchQueue.main.async {
+                vc.present(alert, animated: true)
+            }
+            return vc
+        }
+
         let picker = UIImagePickerController()
         picker.sourceType = .camera
         picker.delegate = context.coordinator
         return picker
     }
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
