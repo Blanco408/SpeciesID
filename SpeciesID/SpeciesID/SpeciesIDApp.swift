@@ -39,7 +39,7 @@ struct SpeciesIDApp: App {
     var body: some Scene {
         WindowGroup {
             if isLoggedIn {
-                HomeView(isLoggedIn: $isLoggedIn)
+                MainTabView(isLoggedIn: $isLoggedIn)
             } else {
                 LoginView(isLoggedIn: $isLoggedIn)
             }

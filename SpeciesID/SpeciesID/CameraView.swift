@@ -5,7 +5,6 @@ import Combine
 import AVFoundation
 
 struct CameraView: View {
-    @Environment(\.dismiss) var dismiss
     @StateObject private var locationManager = LocationManager()
 
     @State private var selectedImage: UIImage?
@@ -16,130 +15,119 @@ struct CameraView: View {
     @State private var isSaving = false
     @State private var showSaved = false
 
-    private let darkGreen = Color(red: 0.0, green: 0.5, blue: 0.2)
-
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                // Image preview
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6))
+        VStack(spacing: 20) {
+            // Image preview
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+                    .frame(height: 250)
+
+                if let image = selectedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
                         .frame(height: 250)
-
-                    if let image = selectedImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(height: 250)
-                            .cornerRadius(12)
-                    } else {
-                        VStack {
-                            Image(systemName: "camera.viewfinder")
-                                .font(.system(size: 50))
-                                .foregroundColor(.gray)
-                            Text("Take or select a photo")
-                                .foregroundColor(.secondary)
-                        }
+                        .cornerRadius(12)
+                } else {
+                    VStack {
+                        Image(systemName: "camera.viewfinder")
+                            .font(.system(size: 50))
+                            .foregroundColor(.gray)
+                        Text("Take or select a photo")
+                            .foregroundColor(.secondary)
                     }
                 }
-                .padding(.horizontal)
+            }
+            .padding(.horizontal)
 
-                // Capture buttons
-                HStack(spacing: 16) {
-                    Button(action: openCamera) {
-                        Label("Camera", systemImage: "camera.fill")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(darkGreen)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-
-                    Button(action: { showImagePicker = true }) {
-                        Label("Library", systemImage: "photo")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(Color(.systemGray5))
-                            .foregroundColor(.primary)
-                            .cornerRadius(10)
-                    }
-                }
-                .padding(.horizontal)
-
-                // Notes field
-                if selectedImage != nil {
-                    TextField("Add notes (optional)", text: $notes)
-                        .textFieldStyle(.roundedBorder)
-                        .padding(.horizontal)
-
-                    // Location status
-                    HStack {
-                        Image(systemName: locationManager.location != nil ? "location.fill" : "location.slash")
-                        Text(locationManager.locationText)
-                    }
-                    .font(.caption)
-                    .foregroundColor(locationManager.location != nil ? .green : .orange)
+            // Capture buttons
+            HStack(spacing: 16) {
+                Button(action: openCamera) {
+                    Label("Camera", systemImage: "camera.fill")
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(AppColors.darkGreen)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
                 }
 
-                Spacer()
+                Button(action: { showImagePicker = true }) {
+                    Label("Library", systemImage: "photo")
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Color(.systemGray5))
+                        .foregroundColor(.primary)
+                        .cornerRadius(10)
+                }
+            }
+            .padding(.horizontal)
 
-                // Save button
-                if selectedImage != nil {
-                    Button(action: saveObservation) {
-                        if isSaving {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text("Save Observation")
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(darkGreen)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+            // Notes field
+            if selectedImage != nil {
+                TextField("Add notes (optional)", text: $notes)
+                    .textFieldStyle(.roundedBorder)
                     .padding(.horizontal)
-                    .disabled(isSaving)
+
+                // Location status
+                HStack {
+                    Image(systemName: locationManager.location != nil ? "location.fill" : "location.slash")
+                    Text(locationManager.locationText)
                 }
+                .font(.caption)
+                .foregroundColor(locationManager.location != nil ? .green : .orange)
             }
-            .padding(.vertical)
-            .navigationTitle("Capture")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+
+            Spacer()
+
+            // Save button
+            if selectedImage != nil {
+                Button(action: saveObservation) {
+                    if isSaving {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("Save Observation")
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(AppColors.darkGreen)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+                .padding(.horizontal)
+                .disabled(isSaving)
             }
-            .sheet(isPresented: $showImagePicker) {
-                PhotoPicker(image: $selectedImage)
-            }
-            .fullScreenCover(isPresented: $showCamera) {
-                CameraCapture(image: $selectedImage)
-            }
-            .alert("Saved!", isPresented: $showSaved) {
-                Button("OK") { dismiss() }
-            } message: {
-                Text("Observation saved locally.")
-            }
-            .alert("Camera Unavailable", isPresented: $showCameraUnavailable) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Camera is not available. Try using the photo library instead.")
-            }
-            .onAppear {
-                locationManager.requestPermission()
-            }
+        }
+        .padding(.vertical)
+        .navigationTitle("Capture")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showImagePicker) {
+            PhotoPicker(image: $selectedImage)
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraCapture(image: $selectedImage)
+        }
+        .alert("Saved!", isPresented: $showSaved) {
+            Button("OK") { resetForm() }
+        } message: {
+            Text("Observation saved locally.")
+        }
+        .alert("Camera Unavailable", isPresented: $showCameraUnavailable) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Camera is not available. Try using the photo library instead.")
+        }
+        .onAppear {
+            locationManager.requestPermission()
         }
     }
 
     private func openCamera() {
-        // Check if camera is available (not on simulator)
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
             showCameraUnavailable = true
             return
         }
 
-        // Check camera permission
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
             showCamera = true
@@ -163,17 +151,15 @@ struct CameraView: View {
         isSaving = true
 
         DispatchQueue.global(qos: .userInitiated).async {
-            // Save image
             let imagePath = ImageStore.shared.saveImage(image)
 
-            // Save observation
             let lat = locationManager.location?.coordinate.latitude ?? 0
             let lon = locationManager.location?.coordinate.longitude ?? 0
 
             _ = ObservationStore.shared.saveObservation(
                 latitude: lat,
                 longitude: lon,
-                speciesId: nil, // ML identification will fill this in
+                speciesId: nil,
                 confidence: 0.0,
                 imagePath: imagePath,
                 notes: notes.isEmpty ? nil : notes
@@ -184,6 +170,11 @@ struct CameraView: View {
                 showSaved = true
             }
         }
+    }
+
+    private func resetForm() {
+        selectedImage = nil
+        notes = ""
     }
 }
 
@@ -234,7 +225,6 @@ struct CameraCapture: UIViewControllerRepresentable {
     }
 
     func makeUIViewController(context: Context) -> UIViewController {
-        // Check camera availability
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
             let alert = UIAlertController(
                 title: "Camera Unavailable",
