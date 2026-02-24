@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @Binding var isLoggedIn: Bool
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var selectedTab: Tab = .home
 
     enum Tab: String {
@@ -38,7 +38,7 @@ struct MainTabView: View {
             .tag(Tab.observations)
 
             NavigationStack {
-                SettingsView(isLoggedIn: $isLoggedIn)
+                SettingsView()
             }
             .tabItem {
                 Label("Settings", systemImage: "gearshape.fill")
@@ -53,5 +53,6 @@ struct MainTabView: View {
 }
 
 #Preview {
-    MainTabView(isLoggedIn: .constant(true))
+    MainTabView()
+        .environmentObject(AuthenticationManager())
 }

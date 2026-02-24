@@ -10,7 +10,8 @@ struct EmailLogin: View {
     @Binding var password: String
     @Binding var isLoading: Bool
     @Binding var errorMessage: String?
-    let onSignIn: () -> Void
+    @Binding var isSignUp: Bool
+    let onSubmit: () -> Void
     let onDismiss: () -> Void
     var body: some View {
         NavigationView {
@@ -40,20 +41,35 @@ struct EmailLogin: View {
                         .textFieldStyle(.roundedBorder)
                         .disabled(isLoading)
                 }
-                Button(action: onSignIn) {
-                    Text("Sign In")
-                        .font(.system(size: 17, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .foregroundColor(.white)
-                        .background(Color.green)
-                        .cornerRadius(12)
+                Button(action: onSubmit) {
+                    if isLoading {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text(isSignUp ? "Create Account" : "Sign In")
+                    }
                 }
+                .font(.system(size: 17, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .foregroundColor(.white)
+                .background(Color.green)
+                .cornerRadius(12)
                 .disabled(isLoading || email.isEmpty || password.isEmpty)
+
+                Button(action: {
+                    isSignUp.toggle()
+                    errorMessage = nil
+                }) {
+                    Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
+                        .font(.system(size: 14))
+                        .foregroundColor(.green)
+                }
+                .disabled(isLoading)
+
                 Spacer()
             }
             .padding()
-            .navigationTitle("Sign In")
+            .navigationTitle(isSignUp ? "Create Account" : "Sign In")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -63,5 +79,3 @@ struct EmailLogin: View {
         }
     }
 }
-
-
