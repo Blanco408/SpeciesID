@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Binding var isLoggedIn: Bool
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var showLogoutConfirmation = false
     @State private var autoSavePhotos = true
     @State private var confidenceThreshold = 0.7
@@ -16,9 +16,9 @@ struct SettingsView: View {
                         .font(.system(size: 40))
                         .foregroundColor(AppColors.darkGreen)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Guest User")
+                        Text(authManager.currentUser?.displayName ?? "Guest User")
                             .font(.headline)
-                        Text("Sign in for full access")
+                        Text(authManager.currentUser?.email.isEmpty == false ? authManager.currentUser!.email : "Sign in for full access")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -89,7 +89,7 @@ struct SettingsView: View {
             titleVisibility: .visible
         ) {
             Button("Log Out", role: .destructive) {
-                isLoggedIn = false
+                authManager.signOut()
             }
             Button("Cancel", role: .cancel) {}
         }
