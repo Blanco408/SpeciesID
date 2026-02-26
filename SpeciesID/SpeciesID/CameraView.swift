@@ -6,6 +6,7 @@ import AVFoundation
 
 struct CameraView: View {
     @StateObject private var locationManager = LocationManager()
+    @StateObject private var classifier = SpeciesClassifierService()
 
     @State private var selectedImage: UIImage?
     @State private var showImagePicker = false
@@ -14,91 +15,120 @@ struct CameraView: View {
     @State private var notes = ""
     @State private var isSaving = false
     @State private var showSaved = false
+    @State private var classificationResult: ClassificationResult?
 
     var body: some View {
-        VStack(spacing: 20) {
-            // Image preview
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .frame(height: 250)
-
-                if let image = selectedImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
+        ScrollView {
+            VStack(spacing: 20) {
+                // Image preview
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray6))
                         .frame(height: 250)
-                        .cornerRadius(12)
-                } else {
-                    VStack {
-                        Image(systemName: "camera.viewfinder")
-                            .font(.system(size: 50))
-                            .foregroundColor(.gray)
-                        Text("Take or select a photo")
+
+                    if let image = selectedImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(height: 250)
+                            .cornerRadius(12)
+                    } else {
+                        VStack {
+                            Image(systemName: "camera.viewfinder")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray)
+                            Text("Take or select a photo")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+
+                // Capture buttons
+                HStack(spacing: 16) {
+                    Button(action: openCamera) {
+                        Label("Camera", systemImage: "camera.fill")
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(AppColors.darkGreen)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+
+                    Button(action: { showImagePicker = true }) {
+                        Label("Library", systemImage: "photo")
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color(.systemGray5))
+                            .foregroundColor(.primary)
+                            .cornerRadius(10)
+                    }
+                }
+                .padding(.horizontal)
+
+                // Classification results
+                if classifier.isClassifying {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Identifying species...")
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                }
-            }
-            .padding(.horizontal)
-
-            // Capture buttons
-            HStack(spacing: 16) {
-                Button(action: openCamera) {
-                    Label("Camera", systemImage: "camera.fill")
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(AppColors.darkGreen)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-
-                Button(action: { showImagePicker = true }) {
-                    Label("Library", systemImage: "photo")
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color(.systemGray5))
-                        .foregroundColor(.primary)
-                        .cornerRadius(10)
-                }
-            }
-            .padding(.horizontal)
-
-            // Notes field
-            if selectedImage != nil {
-                TextField("Add notes (optional)", text: $notes)
-                    .textFieldStyle(.roundedBorder)
+                    .padding()
+                } else if let result = classificationResult {
+                    ClassificationResultView(
+                        result: result,
+                        scientificName: classifier.scientificName(for: result.speciesId)
+                    )
                     .padding(.horizontal)
-
-                // Location status
-                HStack {
-                    Image(systemName: locationManager.location != nil ? "location.fill" : "location.slash")
-                    Text(locationManager.locationText)
-                }
-                .font(.caption)
-                .foregroundColor(locationManager.location != nil ? .green : .orange)
-            }
-
-            Spacer()
-
-            // Save button
-            if selectedImage != nil {
-                Button(action: saveObservation) {
-                    if isSaving {
-                        ProgressView().tint(.white)
-                    } else {
-                        Text("Save Observation")
+                } else if let error = classifier.errorMessage, selectedImage != nil {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundColor(.orange)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
+                    .padding(.horizontal)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(AppColors.darkGreen)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-                .padding(.horizontal)
-                .disabled(isSaving)
+
+                // Notes field
+                if selectedImage != nil {
+                    TextField("Add notes (optional)", text: $notes)
+                        .textFieldStyle(.roundedBorder)
+                        .padding(.horizontal)
+
+                    // Location status
+                    HStack {
+                        Image(systemName: locationManager.location != nil ? "location.fill" : "location.slash")
+                        Text(locationManager.locationText)
+                    }
+                    .font(.caption)
+                    .foregroundColor(locationManager.location != nil ? .green : .orange)
+                }
+
+                Spacer(minLength: 20)
+
+                // Save button
+                if selectedImage != nil {
+                    Button(action: saveObservation) {
+                        if isSaving {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Save Observation")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(AppColors.darkGreen)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    .disabled(isSaving || classifier.isClassifying)
+                }
             }
+            .padding(.vertical)
         }
-        .padding(.vertical)
         .navigationTitle("Capture")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showImagePicker) {
@@ -119,6 +149,14 @@ struct CameraView: View {
         }
         .onAppear {
             locationManager.requestPermission()
+        }
+        .onChange(of: selectedImage) { _, newImage in
+            classificationResult = nil
+            if let image = newImage {
+                Task {
+                    classificationResult = await classifier.classify(image: image)
+                }
+            }
         }
     }
 
@@ -159,8 +197,8 @@ struct CameraView: View {
             _ = ObservationStore.shared.saveObservation(
                 latitude: lat,
                 longitude: lon,
-                speciesId: nil,
-                confidence: 0.0,
+                speciesId: classificationResult?.displayName,
+                confidence: classificationResult?.confidence ?? 0.0,
                 imagePath: imagePath,
                 notes: notes.isEmpty ? nil : notes
             )
@@ -174,6 +212,7 @@ struct CameraView: View {
 
     private func resetForm() {
         selectedImage = nil
+        classificationResult = nil
         notes = ""
     }
 }

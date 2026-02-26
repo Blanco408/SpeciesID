@@ -121,6 +121,24 @@ class ObservationStore {
         save()
     }
 
+    func getObservations(from startDate: Date?, to endDate: Date?) -> [SavedObservation] {
+        let request = NSFetchRequest<SavedObservation>(entityName: "SavedObservation")
+        request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+
+        var predicates: [NSPredicate] = []
+        if let start = startDate {
+            predicates.append(NSPredicate(format: "timestamp >= %@", start as NSDate))
+        }
+        if let end = endDate {
+            predicates.append(NSPredicate(format: "timestamp <= %@", end as NSDate))
+        }
+        if !predicates.isEmpty {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+        }
+
+        return (try? context.fetch(request)) ?? []
+    }
+
     func getUnsyncedObservations() -> [SavedObservation] {
         let request = NSFetchRequest<SavedObservation>(entityName: "SavedObservation")
         request.predicate = NSPredicate(format: "synced == NO")

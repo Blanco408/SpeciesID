@@ -68,3 +68,9 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 GoogleService-Info.plist
+
+# ML training artifacts (large files)
+ml/models/
+ml/data/
+ml/outputs/
+data/

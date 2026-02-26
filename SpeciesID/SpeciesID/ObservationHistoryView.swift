@@ -3,6 +3,7 @@ import CoreData
 
 struct ObservationHistoryView: View {
     @State private var observations: [SavedObservation] = []
+    @State private var showExportSheet = false
 
     var body: some View {
         Group {
@@ -29,6 +30,17 @@ struct ObservationHistoryView: View {
             }
         }
         .navigationTitle("Observations")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showExportSheet = true }) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .disabled(observations.isEmpty)
+            }
+        }
+        .sheet(isPresented: $showExportSheet) {
+            ExportView()
+        }
         .onAppear {
             loadObservations()
         }
