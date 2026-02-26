@@ -73,5 +73,6 @@ GoogleService-Info.plist
 ml/models/
 ml/data/
 ml/outputs/
+ml/.venv/
 data/
 .claude/

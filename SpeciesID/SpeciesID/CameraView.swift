@@ -265,17 +265,9 @@ struct CameraCapture: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UIViewController {
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-            let alert = UIAlertController(
-                title: "Camera Unavailable",
-                message: "Camera is not available on this device.",
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-                self.dismiss()
-            })
             let vc = UIViewController()
             DispatchQueue.main.async {
-                vc.present(alert, animated: true)
+                self.dismiss()
             }
             return vc
         }

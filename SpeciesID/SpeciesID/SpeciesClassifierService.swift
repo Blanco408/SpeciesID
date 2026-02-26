@@ -1,6 +1,7 @@
 import Vision
 import CoreML
 import UIKit
+import Combine
 
 // MARK: - Classification Result
 
@@ -40,7 +41,7 @@ class SpeciesClassifierService: ObservableObject {
     private func loadModel() {
         do {
             let config = MLModelConfiguration()
-            config.computeUnits = .cpuAndNeuralEngine
+            config.computeUnits = .all
             let model = try SpeciesClassifier(configuration: config)
             vnModel = try VNCoreMLModel(for: model.model)
         } catch {

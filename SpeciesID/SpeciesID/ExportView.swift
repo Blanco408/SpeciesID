@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct ExportView: View {
     @StateObject private var exportService = ExportService()
