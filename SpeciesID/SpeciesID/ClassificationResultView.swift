@@ -35,7 +35,7 @@ struct ClassificationResultView: View {
 
                     RoundedRectangle(cornerRadius: 4)
                         .fill(confidenceColor(result.confidence))
-                        .frame(width: geometry.size.width * result.confidence, height: 8)
+                        .frame(width: geometry.size.width * min(result.confidence, 1.0), height: 8)
                 }
             }
             .frame(height: 8)

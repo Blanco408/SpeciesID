@@ -68,50 +68,46 @@ class SpeciesClassifierService: ObservableObject {
         errorMessage = nil
         defer { isClassifying = false }
 
+        let displayNames = self.displayNames
+
         return await withCheckedContinuation { continuation in
-            let request = VNCoreMLRequest(model: vnModel) { [weak self] request, error in
-                guard let self else {
+            DispatchQueue.global(qos: .userInitiated).async {
+                let request = VNCoreMLRequest(model: vnModel) { request, error in
+                    if let error {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+
+                    guard let results = request.results as? [VNClassificationObservation],
+                          let topResult = results.first else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+
+                    let alternatives = results.dropFirst().prefix(2).map {
+                        (speciesId: $0.identifier,
+                         displayName: displayNames[$0.identifier] ?? $0.identifier,
+                         confidence: min(Double($0.confidence), 1.0))
+                    }
+
+                    let result = ClassificationResult(
+                        speciesId: topResult.identifier,
+                        displayName: displayNames[topResult.identifier] ?? topResult.identifier,
+                        confidence: min(Double(topResult.confidence), 1.0),
+                        alternatives: alternatives
+                    )
+
+                    continuation.resume(returning: result)
+                }
+
+                request.imageCropAndScaleOption = .centerCrop
+
+                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+                do {
+                    try handler.perform([request])
+                } catch {
                     continuation.resume(returning: nil)
-                    return
                 }
-
-                if let error {
-                    self.errorMessage = error.localizedDescription
-                    continuation.resume(returning: nil)
-                    return
-                }
-
-                guard let results = request.results as? [VNClassificationObservation],
-                      let topResult = results.first else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-
-                let alternatives = results.dropFirst().prefix(2).map {
-                    (speciesId: $0.identifier,
-                     displayName: self.displayNames[$0.identifier] ?? $0.identifier,
-                     confidence: Double($0.confidence))
-                }
-
-                let result = ClassificationResult(
-                    speciesId: topResult.identifier,
-                    displayName: self.displayNames[topResult.identifier] ?? topResult.identifier,
-                    confidence: Double(topResult.confidence),
-                    alternatives: alternatives
-                )
-
-                self.lastResult = result
-                continuation.resume(returning: result)
-            }
-
-            request.imageCropAndScaleOption = .centerCrop
-
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                self.errorMessage = error.localizedDescription
-                continuation.resume(returning: nil)
             }
         }
     }

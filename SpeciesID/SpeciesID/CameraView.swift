@@ -188,19 +188,23 @@ struct CameraView: View {
         guard let image = selectedImage else { return }
         isSaving = true
 
+        // Capture state on main thread before dispatching
+        let lat = locationManager.location?.coordinate.latitude ?? 0
+        let lon = locationManager.location?.coordinate.longitude ?? 0
+        let species = classificationResult?.displayName
+        let confidence = classificationResult?.confidence ?? 0.0
+        let observationNotes = notes.isEmpty ? nil : notes
+
         DispatchQueue.global(qos: .userInitiated).async {
             let imagePath = ImageStore.shared.saveImage(image)
-
-            let lat = locationManager.location?.coordinate.latitude ?? 0
-            let lon = locationManager.location?.coordinate.longitude ?? 0
 
             _ = ObservationStore.shared.saveObservation(
                 latitude: lat,
                 longitude: lon,
-                speciesId: classificationResult?.displayName,
-                confidence: classificationResult?.confidence ?? 0.0,
+                speciesId: species,
+                confidence: confidence,
                 imagePath: imagePath,
-                notes: notes.isEmpty ? nil : notes
+                notes: observationNotes
             )
 
             DispatchQueue.main.async {

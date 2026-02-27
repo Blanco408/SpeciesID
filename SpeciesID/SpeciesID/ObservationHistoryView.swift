@@ -52,13 +52,7 @@ struct ObservationHistoryView: View {
 
     private func deleteObservations(at offsets: IndexSet) {
         for index in offsets {
-            let obs = observations[index]
-
-            if let imagePath = obs.imagePath {
-                ImageStore.shared.deleteImage(at: imagePath)
-            }
-
-            ObservationStore.shared.deleteObservation(obs)
+            ObservationStore.shared.deleteObservation(observations[index])
         }
 
         loadObservations()

@@ -41,68 +41,89 @@ class ExportService: ObservableObject {
             return nil
         }
 
-        // Create temp directory
-        let exportId = UUID().uuidString
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("SpeciesID_Export_\(exportId)")
-
-        do {
-            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        } catch {
-            exportError = "Failed to create export directory."
-            return nil
+        // Snapshot observation data on the main thread before moving to background
+        let snapshots = observations.map {
+            ObsSnapshot(
+                speciesId: $0.speciesId,
+                timestamp: $0.timestamp,
+                latitude: $0.latitude,
+                longitude: $0.longitude,
+                confidence: $0.confidence,
+                imagePath: $0.imagePath,
+                notes: $0.notes
+            )
         }
 
-        // Generate data file
-        let dataFileURL: URL
-        switch options.format {
-        case .csv:
-            dataFileURL = generateCSV(observations: observations, directory: tempDir)
-        case .json:
-            dataFileURL = generateJSON(observations: observations, directory: tempDir)
-        }
+        let format = options.format
+        let includePhotos = options.includePhotos
 
-        progress = 0.3
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                // Create temp directory
+                let exportId = UUID().uuidString
+                let tempDir = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("SpeciesID_Export_\(exportId)")
 
-        // Copy photos if requested
-        if options.includePhotos {
-            let photosDir = tempDir.appendingPathComponent("photos")
-            try? FileManager.default.createDirectory(at: photosDir, withIntermediateDirectories: true)
-
-            for (index, obs) in observations.enumerated() {
-                autoreleasepool {
-                    if let imagePath = obs.imagePath,
-                       let image = ImageStore.shared.loadImage(filename: imagePath) {
-                        let photoURL = photosDir.appendingPathComponent(imagePath)
-                        if let data = image.jpegData(compressionQuality: 0.8) {
-                            try? data.write(to: photoURL)
-                        }
-                    }
+                do {
+                    try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                } catch {
+                    DispatchQueue.main.async { self?.exportError = "Failed to create export directory." }
+                    continuation.resume(returning: nil)
+                    return
                 }
-                progress = 0.3 + 0.5 * Double(index + 1) / Double(observations.count)
+
+                // Generate data file
+                switch format {
+                case .csv:
+                    self?.generateCSVFromSnapshots(snapshots, directory: tempDir)
+                case .json:
+                    self?.generateJSONFromSnapshots(snapshots, directory: tempDir)
+                }
+
+                DispatchQueue.main.async { self?.progress = 0.3 }
+
+                // Copy photos if requested
+                if includePhotos {
+                    let photosDir = tempDir.appendingPathComponent("photos")
+                    try? FileManager.default.createDirectory(at: photosDir, withIntermediateDirectories: true)
+
+                    for (index, snap) in snapshots.enumerated() {
+                        autoreleasepool {
+                            if let imagePath = snap.imagePath,
+                               let image = ImageStore.shared.loadImage(filename: imagePath) {
+                                let photoURL = photosDir.appendingPathComponent(imagePath)
+                                if let data = image.jpegData(compressionQuality: 0.8) {
+                                    try? data.write(to: photoURL)
+                                }
+                            }
+                        }
+                        let p = 0.3 + 0.5 * Double(index + 1) / Double(snapshots.count)
+                        DispatchQueue.main.async { self?.progress = p }
+                    }
+                } else {
+                    DispatchQueue.main.async { self?.progress = 0.8 }
+                }
+
+                // Create zip archive
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                let zipFilename = "SpeciesID_Export_\(dateFormatter.string(from: Date())).zip"
+                let zipURL = FileManager.default.temporaryDirectory.appendingPathComponent(zipFilename)
+                try? FileManager.default.removeItem(at: zipURL)
+
+                let success = self?.createZipArchive(source: tempDir, destination: zipURL) ?? false
+                DispatchQueue.main.async { self?.progress = 1.0 }
+
+                // Cleanup temp directory
+                try? FileManager.default.removeItem(at: tempDir)
+
+                if success {
+                    continuation.resume(returning: zipURL)
+                } else {
+                    DispatchQueue.main.async { self?.exportError = "Failed to create zip archive." }
+                    continuation.resume(returning: nil)
+                }
             }
-        } else {
-            progress = 0.8
-        }
-
-        // Create zip archive
-        let zipFilename = "SpeciesID_Export_\(formattedDate(Date())).zip"
-        let zipURL = FileManager.default.temporaryDirectory.appendingPathComponent(zipFilename)
-
-        // Remove existing zip if present
-        try? FileManager.default.removeItem(at: zipURL)
-
-        let success = createZipArchive(source: tempDir, destination: zipURL)
-        progress = 1.0
-
-        // Cleanup temp directory
-        try? FileManager.default.removeItem(at: tempDir)
-
-        if success {
-            return zipURL
-        } else {
-            exportError = "Failed to create zip archive."
-            return nil
         }
     }
 
@@ -110,9 +131,19 @@ class ExportService: ObservableObject {
         ObservationStore.shared.getObservations(from: startDate, to: endDate).count
     }
 
-    // MARK: - CSV Generation
+    // MARK: - CSV Generation (from snapshots, safe for background thread)
 
-    private func generateCSV(observations: [SavedObservation], directory: URL) -> URL {
+    private struct ObsSnapshot {
+        let speciesId: String?
+        let timestamp: Date?
+        let latitude: Double
+        let longitude: Double
+        let confidence: Double
+        let imagePath: String?
+        let notes: String?
+    }
+
+    private func generateCSVFromSnapshots(_ snapshots: [ObsSnapshot], directory: URL) {
         let fileURL = directory.appendingPathComponent("observations.csv")
 
         var csvContent = "species_name,date,time,latitude,longitude,confidence,photo_filename,notes\n"
@@ -123,7 +154,7 @@ class ExportService: ObservableObject {
         let timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "HH:mm:ss"
 
-        for obs in observations {
+        for obs in snapshots {
             let species = escapeCSV(obs.speciesId ?? "Unidentified")
             let date = obs.timestamp.map { dateFormatter.string(from: $0) } ?? ""
             let time = obs.timestamp.map { timeFormatter.string(from: $0) } ?? ""
@@ -137,12 +168,11 @@ class ExportService: ObservableObject {
         }
 
         try? csvContent.write(to: fileURL, atomically: true, encoding: .utf8)
-        return fileURL
     }
 
-    // MARK: - JSON Generation
+    // MARK: - JSON Generation (from snapshots, safe for background thread)
 
-    private func generateJSON(observations: [SavedObservation], directory: URL) -> URL {
+    private func generateJSONFromSnapshots(_ snapshots: [ObsSnapshot], directory: URL) {
         let fileURL = directory.appendingPathComponent("observations.json")
 
         let dateFormatter = DateFormatter()
@@ -155,7 +185,7 @@ class ExportService: ObservableObject {
 
         var obsArray: [[String: Any]] = []
 
-        for obs in observations {
+        for obs in snapshots {
             var dict: [String: Any] = [
                 "species_name": obs.speciesId ?? "Unidentified",
                 "date": obs.timestamp.map { dateFormatter.string(from: $0) } ?? "",
@@ -173,15 +203,13 @@ class ExportService: ObservableObject {
 
         let exportDict: [String: Any] = [
             "export_date": isoFormatter.string(from: Date()),
-            "observation_count": observations.count,
+            "observation_count": snapshots.count,
             "observations": obsArray,
         ]
 
         if let jsonData = try? JSONSerialization.data(withJSONObject: exportDict, options: .prettyPrinted) {
             try? jsonData.write(to: fileURL)
         }
-
-        return fileURL
     }
 
     // MARK: - Zip Archive
