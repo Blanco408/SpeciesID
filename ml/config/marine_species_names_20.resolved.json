@@ -1,0 +1,146 @@
+{
+  "quality_grade": "research",
+  "require_geotag": true,
+  "classes": [
+    {
+      "label": "seahare",
+      "taxon_id": 48655,
+      "taxon_name": "Aplysia californica",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "sea_cucumber",
+      "taxon_id": 47720,
+      "taxon_name": "Holothuroidea",
+      "taxon_rank": "class",
+      "max_images": 250
+    },
+    {
+      "label": "brittlestar",
+      "taxon_id": 48836,
+      "taxon_name": "Ophiuroidea",
+      "taxon_rank": "class",
+      "max_images": 250
+    },
+    {
+      "label": "bat_star",
+      "taxon_id": 48830,
+      "taxon_name": "Patiria miniata",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "ochre_sea_star",
+      "taxon_id": 49699,
+      "taxon_name": "Pisaster ochraceus",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "purple_sea_urchin",
+      "taxon_id": 48035,
+      "taxon_name": "Strongylocentrotus purpuratus",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "red_sea_urchin",
+      "taxon_id": 992313,
+      "taxon_name": "Mesocentrotus franciscanus",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "giant_green_anemone",
+      "taxon_id": 51659,
+      "taxon_name": "Anthopleura xanthogrammica",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "aggregating_anemone",
+      "taxon_id": 52564,
+      "taxon_name": "Anthopleura elegantissima",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "california_mussel",
+      "taxon_id": 62806,
+      "taxon_name": "Mytilus californianus",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "red_abalone",
+      "taxon_id": 56652,
+      "taxon_name": "Haliotis rufescens",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "owl_limpet",
+      "taxon_id": 53750,
+      "taxon_name": "Lottia gigantea",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "gooseneck_barnacle",
+      "taxon_id": 48786,
+      "taxon_name": "Pollicipes polymerus",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "acorn_barnacle",
+      "taxon_id": 81610,
+      "taxon_name": "Balanus glandula",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "kelp_crab",
+      "taxon_id": 49723,
+      "taxon_name": "Pugettia producta",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "red_rock_crab",
+      "taxon_id": 47826,
+      "taxon_name": "Cancer productus",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "blueband_hermit_crab",
+      "taxon_id": 49095,
+      "taxon_name": "Pagurus samuelis",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "east_pacific_red_octopus",
+      "taxon_id": 47455,
+      "taxon_name": "Octopus rubescens",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "sea_lemon_nudibranch",
+      "taxon_id": 474590,
+      "taxon_name": "Doriopsilla albopunctata",
+      "taxon_rank": "species",
+      "max_images": 250
+    },
+    {
+      "label": "spanish_shawl_nudibranch",
+      "taxon_id": 194495,
+      "taxon_name": "Flabellinopsis iodinea",
+      "taxon_rank": "species",
+      "max_images": 250
+    }
+  ]
+}

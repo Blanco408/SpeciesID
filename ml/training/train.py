@@ -11,6 +11,7 @@ import os
 import sys
 import argparse
 import time
+import json
 from collections import defaultdict
 
 import torch
@@ -25,8 +26,11 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
 sys.path.insert(0, PROJECT_ROOT)
 
 from ml.training.dataset import (
-    SpeciesDataset, get_train_transforms, get_val_transforms,
-    IDX_TO_CLASS, NUM_CLASSES,
+    SpeciesDataset,
+    build_class_to_idx_from_csv,
+    get_idx_to_class,
+    get_train_transforms,
+    get_val_transforms,
 )
 from ml.training.model import create_model
 
@@ -36,7 +40,7 @@ DEFAULT_OUTPUT_DIR = os.path.join(ML_DIR, "models")
 DEFAULT_PLOTS_DIR = os.path.join(ML_DIR, "outputs")
 
 
-def compute_class_weights(dataset: SpeciesDataset) -> torch.Tensor:
+def compute_class_weights(dataset: SpeciesDataset, num_classes: int) -> torch.Tensor:
     """Compute inverse frequency class weights for imbalanced datasets."""
     counts = defaultdict(int)
     for _, label in dataset.samples:
@@ -44,9 +48,9 @@ def compute_class_weights(dataset: SpeciesDataset) -> torch.Tensor:
 
     total = sum(counts.values())
     weights = []
-    for i in range(NUM_CLASSES):
+    for i in range(num_classes):
         count = counts.get(i, 1)
-        weights.append(total / (NUM_CLASSES * count))
+        weights.append(total / (num_classes * count))
 
     return torch.FloatTensor(weights)
 
@@ -87,7 +91,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device, scaler=None):
 
 
 @torch.no_grad()
-def validate(model, loader, criterion, device):
+def validate(model, loader, criterion, device, idx_to_class: dict[int, str], num_classes: int):
     """Validate model. Returns loss, accuracy, and per-class metrics."""
     model.eval()
     running_loss = 0.0
@@ -116,8 +120,8 @@ def validate(model, loader, criterion, device):
     accuracy = correct / total
 
     per_class = {}
-    for idx in range(NUM_CLASSES):
-        class_name = IDX_TO_CLASS[idx]
+    for idx in range(num_classes):
+        class_name = idx_to_class[idx]
         total_c = class_total.get(idx, 0)
         correct_c = class_correct.get(idx, 0)
         per_class[class_name] = correct_c / total_c if total_c > 0 else 0.0
@@ -167,6 +171,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument("--label-smoothing", type=float, default=0.05)
     parser.add_argument("--patience", type=int, default=7, help="Early stopping patience")
     parser.add_argument("--warmup-epochs", type=int, default=2)
     parser.add_argument("--num-workers", type=int, default=4)
@@ -196,11 +201,26 @@ def main():
         sys.exit(1)
 
     print("Loading datasets...")
-    train_dataset = SpeciesDataset(train_csv, transform=get_train_transforms())
-    val_dataset = SpeciesDataset(val_csv, transform=get_val_transforms())
+    class_to_idx = build_class_to_idx_from_csv([train_csv, val_csv])
+    idx_to_class = get_idx_to_class(class_to_idx)
+    num_classes = len(class_to_idx)
+
+    train_dataset = SpeciesDataset(
+        train_csv,
+        class_to_idx=class_to_idx,
+        transform=get_train_transforms(),
+    )
+    val_dataset = SpeciesDataset(
+        val_csv,
+        class_to_idx=class_to_idx,
+        transform=get_val_transforms(),
+    )
 
     print(f"Train: {len(train_dataset)} samples")
     print(f"Val:   {len(val_dataset)} samples")
+    print(f"Classes: {num_classes}")
+    for class_name in sorted(class_to_idx.keys()):
+        print(f"  - {class_name} -> {class_to_idx[class_name]}")
 
     if len(train_dataset) == 0 or len(val_dataset) == 0:
         print("ERROR: Empty dataset!")
@@ -216,15 +236,18 @@ def main():
     )
 
     # Model
-    print(f"\nCreating MobileNetV3-Small (pretrained=True, classes={NUM_CLASSES})")
-    model = create_model(pretrained=True)
+    print(f"\nCreating MobileNetV3-Small (pretrained=True, classes={num_classes})")
+    model = create_model(num_classes=num_classes, pretrained=True)
     model = model.to(device)
 
     # Class weights for imbalanced data
-    class_weights = compute_class_weights(train_dataset).to(device)
+    class_weights = compute_class_weights(train_dataset, num_classes=num_classes).to(device)
     print(f"Class weights: {class_weights.tolist()}")
 
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    criterion = nn.CrossEntropyLoss(
+        weight=class_weights,
+        label_smoothing=args.label_smoothing,
+    )
     optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs - args.warmup_epochs)
 
@@ -252,7 +275,14 @@ def main():
         train_loss, train_acc = train_one_epoch(
             model, train_loader, criterion, optimizer, device, scaler
         )
-        val_loss, val_acc, per_class = validate(model, val_loader, criterion, device)
+        val_loss, val_acc, per_class = validate(
+            model,
+            val_loader,
+            criterion,
+            device,
+            idx_to_class=idx_to_class,
+            num_classes=num_classes,
+        )
 
         if epoch > args.warmup_epochs:
             scheduler.step()
@@ -285,7 +315,8 @@ def main():
                 "optimizer_state_dict": optimizer.state_dict(),
                 "val_acc": val_acc,
                 "val_loss": val_loss,
-                "class_to_idx": {v: k for k, v in IDX_TO_CLASS.items()},
+                "class_to_idx": class_to_idx,
+                "idx_to_class": idx_to_class,
             }
             best_path = os.path.join(args.output_dir, "best_model.pth")
             torch.save(checkpoint, best_path)
@@ -308,6 +339,11 @@ def main():
     print(f"\n{'='*70}")
     print(f"Training complete! Best validation accuracy: {best_val_acc:.4f}")
     print(f"Best model saved to: {os.path.join(args.output_dir, 'best_model.pth')}")
+
+    class_map_path = os.path.join(args.output_dir, "class_to_idx.json")
+    with open(class_map_path, "w", encoding="utf-8") as f:
+        json.dump(class_to_idx, f, indent=2, sort_keys=True)
+    print(f"Class map saved to: {class_map_path}")
 
     # Save training curves
     curves_path = os.path.join(args.plots_dir, "training_curves.png")

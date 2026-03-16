@@ -11,6 +11,7 @@ struct CameraView: View {
     @State private var selectedImage: UIImage?
     @State private var showImagePicker = false
     @State private var showCamera = false
+    @State private var showFullPhotoPreview = false
     @State private var showCameraUnavailable = false
     @State private var notes = ""
     @State private var isSaving = false
@@ -27,11 +28,23 @@ struct CameraView: View {
                         .frame(height: 250)
 
                     if let image = selectedImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(height: 250)
-                            .cornerRadius(12)
+                        DetectionPreview(
+                            image: image,
+                            detections: classificationResult?.detections ?? []
+                        )
+                        .frame(height: 250)
+                        .cornerRadius(12)
+                        .onTapGesture {
+                            showFullPhotoPreview = true
+                        }
+                        .overlay(alignment: .bottomTrailing) {
+                            Label("Full", systemImage: "arrow.up.left.and.arrow.down.right")
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(.ultraThinMaterial, in: Capsule())
+                                .padding(10)
+                        }
                     } else {
                         VStack {
                             Image(systemName: "camera.viewfinder")
@@ -43,6 +56,12 @@ struct CameraView: View {
                     }
                 }
                 .padding(.horizontal)
+
+                if selectedImage != nil {
+                    Text("Tap photo to view full image")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
 
                 // Capture buttons
                 HStack(spacing: 16) {
@@ -78,7 +97,7 @@ struct CameraView: View {
                 } else if let result = classificationResult {
                     ClassificationResultView(
                         result: result,
-                        scientificName: classifier.scientificName(for: result.speciesId)
+                        scientificNameLookup: classifier.scientificName(for:)
                     )
                     .padding(.horizontal)
                 } else if let error = classifier.errorMessage, selectedImage != nil {
@@ -133,6 +152,14 @@ struct CameraView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showImagePicker) {
             PhotoPicker(image: $selectedImage)
+        }
+        .sheet(isPresented: $showFullPhotoPreview) {
+            if let image = selectedImage {
+                FullPhotoPreviewView(
+                    image: image,
+                    detections: classificationResult?.detections ?? []
+                )
+            }
         }
         .fullScreenCover(isPresented: $showCamera) {
             CameraCapture(image: $selectedImage)
@@ -191,8 +218,31 @@ struct CameraView: View {
         // Capture state on main thread before dispatching
         let lat = locationManager.location?.coordinate.latitude ?? 0
         let lon = locationManager.location?.coordinate.longitude ?? 0
-        let species = classificationResult?.displayName
-        let confidence = classificationResult?.confidence ?? 0.0
+        let identifications = classificationResult?.detections.map { detection in
+            LocalSpeciesIdentification(
+                id: UUID().uuidString,
+                speciesId: detection.speciesId,
+                displayName: detection.displayName,
+                confidenceScore: detection.confidence,
+                modelVersion: "local-multicrop-1",
+                isUserVerified: false,
+                alternativeSpecies: detection.alternatives.map {
+                    LocalAlternativeMatch(
+                        speciesId: $0.speciesId,
+                        displayName: $0.displayName,
+                        confidenceScore: $0.confidence
+                    )
+                },
+                boundingBox: LocalBoundingBox(
+                    x: detection.boundingBox.origin.x,
+                    y: detection.boundingBox.origin.y,
+                    width: detection.boundingBox.width,
+                    height: detection.boundingBox.height
+                )
+            )
+        } ?? []
+        let species = identifications.first?.speciesId ?? classificationResult?.speciesId
+        let confidence = identifications.first?.confidenceScore ?? classificationResult?.confidence ?? 0.0
         let observationNotes = notes.isEmpty ? nil : notes
 
         DispatchQueue.global(qos: .userInitiated).async {
@@ -203,6 +253,7 @@ struct CameraView: View {
                 longitude: lon,
                 speciesId: species,
                 confidence: confidence,
+                identifications: identifications,
                 imagePath: imagePath,
                 notes: observationNotes
             )
@@ -218,6 +269,133 @@ struct CameraView: View {
         selectedImage = nil
         classificationResult = nil
         notes = ""
+    }
+}
+
+// MARK: - Detection Overlay
+
+private struct DetectionPreview: View {
+    let image: UIImage
+    let detections: [SpeciesDetection]
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+
+                DetectionOverlay(
+                    detections: detections,
+                    imageSize: image.size,
+                    canvasSize: geometry.size
+                )
+            }
+        }
+    }
+}
+
+private struct DetectionOverlay: View {
+    let detections: [SpeciesDetection]
+    let imageSize: CGSize
+    let canvasSize: CGSize
+
+    var body: some View {
+        let imageRect = imageRectInCanvas()
+
+        ZStack(alignment: .topLeading) {
+            ForEach(detections) { detection in
+                let rect = CGRect(
+                    x: imageRect.minX + detection.boundingBox.minX * imageRect.width,
+                    y: imageRect.minY + detection.boundingBox.minY * imageRect.height,
+                    width: detection.boundingBox.width * imageRect.width,
+                    height: detection.boundingBox.height * imageRect.height
+                )
+
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(AppColors.darkGreen.opacity(0.95), lineWidth: 2)
+                    .frame(width: max(20, rect.width), height: max(20, rect.height))
+                    .position(x: rect.midX, y: rect.midY)
+                    .overlay(alignment: .topLeading) {
+                        Text("\(detection.displayName) \(Int(detection.confidence * 100))%")
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(AppColors.darkGreen.opacity(0.9))
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .offset(x: 4, y: 4)
+                    }
+            }
+        }
+    }
+
+    private func imageRectInCanvas() -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0,
+              canvasSize.width > 0, canvasSize.height > 0 else {
+            return CGRect(origin: .zero, size: canvasSize)
+        }
+
+        let imageAspect = imageSize.width / imageSize.height
+        let canvasAspect = canvasSize.width / canvasSize.height
+
+        if imageAspect > canvasAspect {
+            let width = canvasSize.width
+            let height = width / imageAspect
+            return CGRect(
+                x: 0,
+                y: (canvasSize.height - height) / 2.0,
+                width: width,
+                height: height
+            )
+        } else {
+            let height = canvasSize.height
+            let width = height * imageAspect
+            return CGRect(
+                x: (canvasSize.width - width) / 2.0,
+                y: 0,
+                width: width,
+                height: height
+            )
+        }
+    }
+}
+
+private struct FullPhotoPreviewView: View {
+    let image: UIImage
+    let detections: [SpeciesDetection]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                GeometryReader { geometry in
+                    ZStack {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+
+                        DetectionOverlay(
+                            detections: detections,
+                            imageSize: image.size,
+                            canvasSize: geometry.size
+                        )
+                    }
+                }
+            }
+            .navigationTitle("Full Photo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

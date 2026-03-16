@@ -1,0 +1,9 @@
+{
+  "quality_grade": "research",
+  "require_geotag": true,
+  "classes": [
+    { "label": "seahare", "taxon_id": 47768, "max_images": 3000 },
+    { "label": "sea_cucumber", "taxon_id": 47720, "max_images": 3000 },
+    { "label": "brittlestar", "taxon_id": 47729, "max_images": 3000 }
+  ]
+}

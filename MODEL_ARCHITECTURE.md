@@ -4,6 +4,24 @@
 
 SpeciesID uses a **MobileNetV3-Small** backbone fine-tuned for 3-class marine species classification. The PyTorch model is converted to **Core ML** (`.mlpackage`) for on-device inference on iOS via the Vision framework.
 
+## 2026 Upgrade Notes
+
+The current codebase now supports a scalable class map and multi-species detection workflow:
+
+- **Dynamic class mapping in training/eval/export**:
+  - Class IDs are inferred from split CSVs (`class_label`) instead of hardcoded constants.
+  - Checkpoints save `class_to_idx` and `idx_to_class`.
+  - Core ML conversion uses checkpoint class labels automatically.
+
+- **Multi-species on-device inference (offline)**:
+  - iOS now performs tiled multi-crop classification over one photo.
+  - Predictions are merged with IoU-based suppression to return multiple species detections with approximate bounding boxes.
+  - No network dependency is required for classification.
+
+- **Local/offline data schema**:
+  - Observations now store multi-identification payloads (`identificationsJSON`) while remaining backward compatible with legacy single-label records.
+  - Sync/export/history consume the new multi-identification format.
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    TRAINING (PyTorch)                    │

@@ -69,14 +69,44 @@ final class SyncService: ObservableObject {
             do {
                 let docRef = db.collection("observations").document()
 
-                var identifications: [[String: Any]] = []
-                if let speciesId = saved.speciesId {
+                let localIdentifications = ObservationStore.shared.identifications(for: saved)
+
+                var identifications: [[String: Any]] = localIdentifications.map { local in
+                    var payload: [String: Any] = [
+                        "id": local.id,
+                        "species_id": local.speciesId,
+                        "display_name": local.displayName,
+                        "confidence_score": local.confidenceScore,
+                        "model_version": local.modelVersion,
+                        "is_user_verified": local.isUserVerified,
+                        "alternative_species": local.alternativeSpecies.map {
+                            [
+                                "species_id": $0.speciesId,
+                                "display_name": $0.displayName,
+                                "confidence_score": $0.confidenceScore,
+                            ]
+                        },
+                    ]
+                    if let box = local.boundingBox {
+                        payload["bounding_box"] = [
+                            "x": box.x,
+                            "y": box.y,
+                            "width": box.width,
+                            "height": box.height,
+                        ]
+                    }
+                    return payload
+                }
+
+                // Backward compatibility for legacy records.
+                if identifications.isEmpty, let speciesId = saved.speciesId {
                     identifications.append([
                         "id": UUID().uuidString,
                         "species_id": speciesId,
+                        "display_name": speciesId,
                         "confidence_score": saved.confidence,
-                        "model_version": "local",
-                        "is_user_verified": false
+                        "model_version": "legacy-single-label",
+                        "is_user_verified": false,
                     ])
                 }
 

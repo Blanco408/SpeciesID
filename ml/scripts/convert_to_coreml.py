@@ -21,16 +21,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
 sys.path.insert(0, PROJECT_ROOT)
 
-from ml.training.dataset import IDX_TO_CLASS, IMAGENET_MEAN, IMAGENET_STD
+from ml.training.dataset import IMAGENET_MEAN, IMAGENET_STD
 from ml.training.model import load_trained_model
 
 ML_DIR = os.path.join(PROJECT_ROOT, "ml")
 DEFAULT_MODEL_PATH = os.path.join(ML_DIR, "models", "best_model.pth")
 DEFAULT_OUTPUT_PATH = os.path.join(ML_DIR, "models", "SpeciesClassifier.mlmodel")
-
-# Class labels in index order
-CLASS_LABELS = [IDX_TO_CLASS[i] for i in range(len(IDX_TO_CLASS))]
-
 
 class NormalizedModel(torch.nn.Module):
     """Wraps model with ImageNet normalization so Core ML only needs scale=1/255."""
@@ -50,8 +46,14 @@ class NormalizedModel(torch.nn.Module):
 def convert_to_coreml(model_path: str, output_path: str):
     """Convert PyTorch model to Core ML with optimizations."""
     print(f"Loading PyTorch model from {model_path}")
-    model = load_trained_model(model_path, device="cpu")
+    model, class_to_idx = load_trained_model(
+        model_path,
+        device="cpu",
+        return_class_mapping=True,
+    )
     model.eval()
+    idx_to_class = {idx: label for label, idx in class_to_idx.items()}
+    class_labels = [idx_to_class[i] for i in range(len(idx_to_class))]
 
     # Wrap model with normalization so Core ML only needs to scale pixels to [0,1]
     wrapped_model = NormalizedModel(model)
@@ -66,7 +68,7 @@ def convert_to_coreml(model_path: str, output_path: str):
     # The NormalizedModel then applies (x - mean) / std internally
     scale = 1.0 / 255.0
 
-    print(f"Class labels: {CLASS_LABELS}")
+    print(f"Class labels ({len(class_labels)}): {class_labels}")
     print("Converting to Core ML...")
 
     mlmodel = ct.convert(
@@ -80,14 +82,17 @@ def convert_to_coreml(model_path: str, output_path: str):
                 color_layout="RGB",
             )
         ],
-        classifier_config=ct.ClassifierConfig(class_labels=CLASS_LABELS),
+        classifier_config=ct.ClassifierConfig(class_labels=class_labels),
         minimum_deployment_target=ct.target.iOS17,
         convert_to="mlprogram",
     )
 
     # Add metadata
     mlmodel.author = "SpeciesID Team"
-    mlmodel.short_description = "Classifies marine species: seahare, brittlestar, sea cucumber"
+    label_preview = ", ".join(class_labels[:8])
+    if len(class_labels) > 8:
+        label_preview += ", ..."
+    mlmodel.short_description = f"Classifies marine species ({len(class_labels)} classes): {label_preview}"
     mlmodel.version = "1.0.0"
     mlmodel.input_description["image"] = "Color photo of marine organism (224x224)"
 
@@ -115,10 +120,10 @@ def convert_to_coreml(model_path: str, output_path: str):
     else:
         print(f"PASS: Model is under 100MB limit")
 
-    return mlmodel
+    return mlmodel, idx_to_class
 
 
-def validate_coreml_model(mlmodel, pytorch_model_path: str):
+def validate_coreml_model(mlmodel, pytorch_model_path: str, idx_to_class: dict[int, str]):
     """Validate Core ML model predictions match PyTorch."""
     print("\nValidating Core ML model accuracy...")
 
@@ -126,7 +131,11 @@ def validate_coreml_model(mlmodel, pytorch_model_path: str):
         import numpy as np
         from PIL import Image
 
-        model_pt = load_trained_model(pytorch_model_path, device="cpu")
+        model_pt, _ = load_trained_model(
+            pytorch_model_path,
+            device="cpu",
+            return_class_mapping=True,
+        )
         model_pt.eval()
 
         # Test with random images
@@ -152,7 +161,7 @@ def validate_coreml_model(mlmodel, pytorch_model_path: str):
             with torch.no_grad():
                 pt_output = model_pt(tensor)
                 pt_pred = pt_output.argmax(1).item()
-                pt_class = IDX_TO_CLASS[pt_pred]
+                pt_class = idx_to_class[pt_pred]
 
             # Core ML prediction
             cml_output = mlmodel.predict({"image": pil_img})
@@ -182,10 +191,10 @@ def main():
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
 
-    mlmodel = convert_to_coreml(args.model, args.output)
+    mlmodel, idx_to_class = convert_to_coreml(args.model, args.output)
 
     if not args.skip_validation:
-        validate_coreml_model(mlmodel, args.model)
+        validate_coreml_model(mlmodel, args.model, idx_to_class)
 
     print(f"\nDone! Core ML model saved to: {args.output}")
     print(f"Copy this file into SpeciesID/SpeciesID/ for Xcode to pick it up.")

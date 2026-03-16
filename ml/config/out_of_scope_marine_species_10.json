@@ -1,0 +1,76 @@
+{
+  "quality_grade": "research",
+  "require_geotag": true,
+  "classes": [
+    {
+      "label": "moon_jelly",
+      "taxon_query": "Aurelia aurita",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 30
+    },
+    {
+      "label": "sea_otter",
+      "taxon_query": "Enhydra lutris",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Mammalia",
+      "max_images": 30
+    },
+    {
+      "label": "harbor_seal",
+      "taxon_query": "Phoca vitulina",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Mammalia",
+      "max_images": 30
+    },
+    {
+      "label": "leopard_shark",
+      "taxon_query": "Triakis semifasciata",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 30
+    },
+    {
+      "label": "kelp_bass",
+      "taxon_query": "Paralabrax clathratus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 30
+    },
+    {
+      "label": "garibaldi",
+      "taxon_query": "Hypsypops rubicundus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 30
+    },
+    {
+      "label": "california_lobster",
+      "taxon_query": "Panulirus interruptus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 30
+    },
+    {
+      "label": "giant_pacific_chiton",
+      "taxon_query": "Cryptochiton stelleri",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 30
+    },
+    {
+      "label": "sand_dollar",
+      "taxon_query": "Dendraster excentricus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 30
+    },
+    {
+      "label": "common_octopus",
+      "taxon_query": "Octopus vulgaris",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 30
+    }
+  ]
+}

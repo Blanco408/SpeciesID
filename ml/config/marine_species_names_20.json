@@ -1,0 +1,26 @@
+{
+  "quality_grade": "research",
+  "require_geotag": true,
+  "classes": [
+    { "label": "seahare", "taxon_query": "Aplysia californica", "preferred_rank": "species", "max_images": 1400 },
+    { "label": "sea_cucumber", "taxon_query": "Holothuroidea", "preferred_rank": "class", "max_images": 1600 },
+    { "label": "brittlestar", "taxon_query": "Ophiuroidea", "preferred_rank": "class", "max_images": 1600 },
+    { "label": "bat_star", "taxon_query": "Patiria miniata", "preferred_rank": "species", "max_images": 1400 },
+    { "label": "ochre_sea_star", "taxon_query": "Pisaster ochraceus", "preferred_rank": "species", "max_images": 1400 },
+    { "label": "purple_sea_urchin", "taxon_query": "Strongylocentrotus purpuratus", "preferred_rank": "species", "max_images": 1400 },
+    { "label": "red_sea_urchin", "taxon_query": "Mesocentrotus franciscanus", "preferred_rank": "species", "max_images": 1400 },
+    { "label": "giant_green_anemone", "taxon_query": "Anthopleura xanthogrammica", "preferred_rank": "species", "max_images": 1200 },
+    { "label": "aggregating_anemone", "taxon_query": "Anthopleura elegantissima", "preferred_rank": "species", "max_images": 1200 },
+    { "label": "california_mussel", "taxon_query": "Mytilus californianus", "preferred_rank": "species", "max_images": 1400 },
+    { "label": "red_abalone", "taxon_query": "Haliotis rufescens", "preferred_rank": "species", "max_images": 1200 },
+    { "label": "owl_limpet", "taxon_query": "Lottia gigantea", "preferred_rank": "species", "max_images": 1200 },
+    { "label": "gooseneck_barnacle", "taxon_query": "Pollicipes polymerus", "preferred_rank": "species", "max_images": 1200 },
+    { "label": "acorn_barnacle", "taxon_query": "Balanus glandula", "preferred_rank": "species", "max_images": 1200 },
+    { "label": "kelp_crab", "taxon_query": "Pugettia producta", "preferred_rank": "species", "max_images": 1200 },
+    { "label": "red_rock_crab", "taxon_query": "Cancer productus", "preferred_rank": "species", "max_images": 1200 },
+    { "label": "blueband_hermit_crab", "taxon_query": "Pagurus samuelis", "preferred_rank": "species", "max_images": 1000 },
+    { "label": "east_pacific_red_octopus", "taxon_query": "Octopus rubescens", "preferred_rank": "species", "max_images": 1000 },
+    { "label": "sea_lemon_nudibranch", "taxon_query": "Doriopsilla albopunctata", "preferred_rank": "species", "max_images": 1000 },
+    { "label": "spanish_shawl_nudibranch", "taxon_query": "Flabellina iodinea", "preferred_rank": "species", "max_images": 1000 }
+  ]
+}

@@ -67,17 +67,54 @@ def split_by_user(entries: list) -> tuple:
         total = sum(len(user_groups[u]) for u in users)
         train_target = int(total * TRAIN_RATIO)
         val_target = int(total * VAL_RATIO)
+        test_target = total - train_target - val_target
 
-        # Assign users to splits
-        current_train, current_val, current_test = 0, 0, 0
+        # If the class has too few unique users, fall back to per-image split so all
+        # classes remain represented in val/test.
+        if len(users) < 4:
+            class_entries = []
+            for user in users:
+                class_entries.extend(user_groups[user])
+            random.shuffle(class_entries)
+
+            val_count = max(1, int(total * VAL_RATIO))
+            test_count = max(1, int(total * TEST_RATIO))
+            train_count = max(1, total - val_count - test_count)
+            # Keep exact total after rounding.
+            overflow = train_count + val_count + test_count - total
+            if overflow > 0:
+                train_count -= overflow
+
+            train.extend(class_entries[:train_count])
+            val.extend(class_entries[train_count:train_count + val_count])
+            test.extend(class_entries[train_count + val_count:train_count + val_count + test_count])
+            continue
+
+        # Assign one user to val and one to test first, to guarantee class coverage.
+        val_seed_user = users.pop()
+        test_seed_user = users.pop()
+        val.extend(user_groups[val_seed_user])
+        test.extend(user_groups[test_seed_user])
+        current_train = 0
+        current_val = len(user_groups[val_seed_user])
+        current_test = len(user_groups[test_seed_user])
+
+        # Greedily assign remaining users to the split most under target.
         for user in users:
             user_entries = user_groups[user]
             count = len(user_entries)
 
-            if current_train < train_target:
+            deficits = {
+                "train": train_target - current_train,
+                "val": val_target - current_val,
+                "test": test_target - current_test,
+            }
+            destination = max(deficits.keys(), key=lambda k: deficits[k])
+
+            if destination == "train":
                 train.extend(user_entries)
                 current_train += count
-            elif current_val < val_target:
+            elif destination == "val":
                 val.extend(user_entries)
                 current_val += count
             else:

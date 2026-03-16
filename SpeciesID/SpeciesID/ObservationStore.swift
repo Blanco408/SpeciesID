@@ -1,6 +1,30 @@
 import Foundation
 import CoreData
 
+struct LocalAlternativeMatch: Codable, Hashable {
+    var speciesId: String
+    var displayName: String
+    var confidenceScore: Double
+}
+
+struct LocalBoundingBox: Codable, Hashable {
+    var x: Double
+    var y: Double
+    var width: Double
+    var height: Double
+}
+
+struct LocalSpeciesIdentification: Codable, Hashable, Identifiable {
+    var id: String
+    var speciesId: String
+    var displayName: String
+    var confidenceScore: Double
+    var modelVersion: String
+    var isUserVerified: Bool
+    var alternativeSpecies: [LocalAlternativeMatch]
+    var boundingBox: LocalBoundingBox?
+}
+
 // MARK: - Core Data Stack
 
 class ObservationStore {
@@ -8,6 +32,10 @@ class ObservationStore {
 
     lazy var container: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "ObservationStore", managedObjectModel: Self.model)
+        if let description = container.persistentStoreDescriptions.first {
+            description.setOption(true as NSNumber, forKey: NSMigratePersistentStoresAutomaticallyOption)
+            description.setOption(true as NSNumber, forKey: NSInferMappingModelAutomaticallyOption)
+        }
         container.loadPersistentStores { _, error in
             if let error = error {
                 print("Core Data error: \(error)")
@@ -54,6 +82,11 @@ class ObservationStore {
         confidence.name = "confidence"
         confidence.attributeType = .doubleAttributeType
 
+        let identificationsJSON = NSAttributeDescription()
+        identificationsJSON.name = "identificationsJSON"
+        identificationsJSON.attributeType = .stringAttributeType
+        identificationsJSON.isOptional = true
+
         let imagePath = NSAttributeDescription()
         imagePath.name = "imagePath"
         imagePath.attributeType = .stringAttributeType
@@ -69,7 +102,18 @@ class ObservationStore {
         synced.attributeType = .booleanAttributeType
         synced.defaultValue = false
 
-        entity.properties = [id, timestamp, latitude, longitude, speciesId, confidence, imagePath, notes, synced]
+        entity.properties = [
+            id,
+            timestamp,
+            latitude,
+            longitude,
+            speciesId,
+            confidence,
+            identificationsJSON,
+            imagePath,
+            notes,
+            synced,
+        ]
         model.entities = [entity]
 
         return model
@@ -82,6 +126,7 @@ class ObservationStore {
         longitude: Double,
         speciesId: String?,
         confidence: Double,
+        identifications: [LocalSpeciesIdentification] = [],
         imagePath: String?,
         notes: String?
     ) -> UUID {
@@ -92,6 +137,7 @@ class ObservationStore {
         observation.longitude = longitude
         observation.speciesId = speciesId
         observation.confidence = confidence
+        observation.identificationsJSON = encodeIdentifications(identifications)
         observation.imagePath = imagePath
         observation.notes = notes
         observation.synced = false
@@ -150,10 +196,49 @@ class ObservationStore {
         save()
     }
 
+    func identifications(for observation: SavedObservation) -> [LocalSpeciesIdentification] {
+        if let json = observation.identificationsJSON,
+           let data = json.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode([LocalSpeciesIdentification].self, from: data),
+           !decoded.isEmpty {
+            return decoded.sorted { $0.confidenceScore > $1.confidenceScore }
+        }
+
+        // Backward-compatible fallback for records saved before multi-species support.
+        if let species = observation.speciesId, !species.isEmpty {
+            return [
+                LocalSpeciesIdentification(
+                    id: UUID().uuidString,
+                    speciesId: species,
+                    displayName: species,
+                    confidenceScore: observation.confidence,
+                    modelVersion: "legacy-single-label",
+                    isUserVerified: false,
+                    alternativeSpecies: [],
+                    boundingBox: nil
+                )
+            ]
+        }
+
+        return []
+    }
+
+    func primaryIdentification(for observation: SavedObservation) -> LocalSpeciesIdentification? {
+        identifications(for: observation).first
+    }
+
     private func save() {
         if context.hasChanges {
             try? context.save()
         }
+    }
+
+    private func encodeIdentifications(_ identifications: [LocalSpeciesIdentification]) -> String? {
+        guard !identifications.isEmpty,
+              let data = try? JSONEncoder().encode(identifications) else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
     }
 }
 
@@ -167,6 +252,7 @@ public class SavedObservation: NSManagedObject {
     @NSManaged public var longitude: Double
     @NSManaged public var speciesId: String?
     @NSManaged public var confidence: Double
+    @NSManaged public var identificationsJSON: String?
     @NSManaged public var imagePath: String?
     @NSManaged public var notes: String?
     @NSManaged public var synced: Bool

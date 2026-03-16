@@ -7,6 +7,7 @@ struct MainTabView: View {
     enum Tab: String {
         case home
         case capture
+        case species
         case observations
         case settings
     }
@@ -28,6 +29,14 @@ struct MainTabView: View {
                 Label("Capture", systemImage: "camera.fill")
             }
             .tag(Tab.capture)
+
+            NavigationStack {
+                SupportedSpeciesView()
+            }
+            .tabItem {
+                Label("Species", systemImage: "fish.fill")
+            }
+            .tag(Tab.species)
 
             NavigationStack {
                 ObservationHistoryView()

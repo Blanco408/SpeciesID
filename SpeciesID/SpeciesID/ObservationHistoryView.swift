@@ -65,6 +65,9 @@ struct ObservationRow: View {
     let observation: SavedObservation
 
     var body: some View {
+        let identifications = ObservationStore.shared.identifications(for: observation)
+        let primary = identifications.first
+
         HStack(spacing: 12) {
             // Thumbnail
             if let imagePath = observation.imagePath,
@@ -87,8 +90,14 @@ struct ObservationRow: View {
 
             // Details
             VStack(alignment: .leading, spacing: 4) {
-                Text(observation.speciesId ?? "Unidentified")
+                Text(primary?.displayName ?? observation.speciesId ?? "Unidentified")
                     .font(.headline)
+
+                if identifications.count > 1 {
+                    Text("+\(identifications.count - 1) more species")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
 
                 if let date = observation.timestamp {
                     Text(date, style: .date)
@@ -117,8 +126,8 @@ struct ObservationRow: View {
             Spacer()
 
             // Confidence badge
-            if observation.confidence > 0 {
-                Text("\(Int(observation.confidence * 100))%")
+            if let primary, primary.confidenceScore > 0 {
+                Text("\(Int(primary.confidenceScore * 100))%")
                     .font(.caption)
                     .fontWeight(.medium)
                     .padding(.horizontal, 8)

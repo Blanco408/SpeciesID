@@ -43,12 +43,16 @@ class ExportService: ObservableObject {
 
         // Snapshot observation data on the main thread before moving to background
         let snapshots = observations.map {
-            ObsSnapshot(
-                speciesId: $0.speciesId,
+            let identifications = ObservationStore.shared.identifications(for: $0)
+            let primary = identifications.first
+            return ObsSnapshot(
+                speciesId: primary?.displayName ?? $0.speciesId,
+                allSpecies: identifications.map(\.displayName),
+                identifications: identifications,
                 timestamp: $0.timestamp,
                 latitude: $0.latitude,
                 longitude: $0.longitude,
-                confidence: $0.confidence,
+                confidence: primary?.confidenceScore ?? $0.confidence,
                 imagePath: $0.imagePath,
                 notes: $0.notes
             )
@@ -135,6 +139,8 @@ class ExportService: ObservableObject {
 
     private struct ObsSnapshot {
         let speciesId: String?
+        let allSpecies: [String]
+        let identifications: [LocalSpeciesIdentification]
         let timestamp: Date?
         let latitude: Double
         let longitude: Double
@@ -146,7 +152,7 @@ class ExportService: ObservableObject {
     private func generateCSVFromSnapshots(_ snapshots: [ObsSnapshot], directory: URL) {
         let fileURL = directory.appendingPathComponent("observations.csv")
 
-        var csvContent = "species_name,date,time,latitude,longitude,confidence,photo_filename,notes\n"
+        var csvContent = "species_name,all_species,species_count,date,time,latitude,longitude,confidence,photo_filename,notes\n"
 
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
@@ -156,6 +162,8 @@ class ExportService: ObservableObject {
 
         for obs in snapshots {
             let species = escapeCSV(obs.speciesId ?? "Unidentified")
+            let allSpecies = escapeCSV(obs.allSpecies.joined(separator: "; "))
+            let speciesCount = "\(obs.identifications.count)"
             let date = obs.timestamp.map { dateFormatter.string(from: $0) } ?? ""
             let time = obs.timestamp.map { timeFormatter.string(from: $0) } ?? ""
             let lat = String(format: "%.6f", obs.latitude)
@@ -164,7 +172,7 @@ class ExportService: ObservableObject {
             let photo = obs.imagePath ?? ""
             let notes = escapeCSV(obs.notes ?? "")
 
-            csvContent += "\(species),\(date),\(time),\(lat),\(lon),\(confidence),\(photo),\(notes)\n"
+            csvContent += "\(species),\(allSpecies),\(speciesCount),\(date),\(time),\(lat),\(lon),\(confidence),\(photo),\(notes)\n"
         }
 
         try? csvContent.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -188,12 +196,42 @@ class ExportService: ObservableObject {
         for obs in snapshots {
             var dict: [String: Any] = [
                 "species_name": obs.speciesId ?? "Unidentified",
+                "all_species": obs.allSpecies,
+                "species_count": obs.identifications.count,
                 "date": obs.timestamp.map { dateFormatter.string(from: $0) } ?? "",
                 "time": obs.timestamp.map { timeFormatter.string(from: $0) } ?? "",
                 "latitude": obs.latitude,
                 "longitude": obs.longitude,
                 "confidence": obs.confidence,
                 "photo_filename": obs.imagePath ?? "",
+                "identifications": obs.identifications.map { identification in
+                    var payload: [String: Any] = [
+                        "id": identification.id,
+                        "species_id": identification.speciesId,
+                        "display_name": identification.displayName,
+                        "confidence_score": identification.confidenceScore,
+                        "model_version": identification.modelVersion,
+                        "is_user_verified": identification.isUserVerified,
+                        "alternative_species": identification.alternativeSpecies.map {
+                            [
+                                "species_id": $0.speciesId,
+                                "display_name": $0.displayName,
+                                "confidence_score": $0.confidenceScore,
+                            ]
+                        },
+                    ]
+
+                    if let box = identification.boundingBox {
+                        payload["bounding_box"] = [
+                            "x": box.x,
+                            "y": box.y,
+                            "width": box.width,
+                            "height": box.height,
+                        ]
+                    }
+
+                    return payload
+                },
             ]
             if let notes = obs.notes, !notes.isEmpty {
                 dict["notes"] = notes
