@@ -1,0 +1,9 @@
+# Keep the app's bundled Core ML model package in git even though the repo root
+# ignores generic data directories.
+!SpeciesClassifier.mlpackage/
+!SpeciesClassifier.mlpackage/Manifest.json
+!SpeciesClassifier.mlpackage/Data/
+!SpeciesClassifier.mlpackage/Data/com.apple.CoreML/
+!SpeciesClassifier.mlpackage/Data/com.apple.CoreML/model.mlmodel
+!SpeciesClassifier.mlpackage/Data/com.apple.CoreML/weights/
+!SpeciesClassifier.mlpackage/Data/com.apple.CoreML/weights/weight.bin
