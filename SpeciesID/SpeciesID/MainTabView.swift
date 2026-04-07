@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var authManager: AuthenticationManager
+    @EnvironmentObject var syncService: SyncService
     @State private var selectedTab: Tab = .home
 
     enum Tab: String {
@@ -57,6 +58,11 @@ struct MainTabView: View {
         .tint(AppColors.darkGreen)
         .onAppear {
             AppColors.configureTabBarAppearance()
+        }
+        .task {
+            if let uid = authManager.currentUser?.uid {
+                await syncService.sync(userId: uid)
+            }
         }
     }
 }
