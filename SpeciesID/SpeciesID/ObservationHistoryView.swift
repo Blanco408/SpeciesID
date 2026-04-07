@@ -2,6 +2,7 @@ import SwiftUI
 import CoreData
 
 struct ObservationHistoryView: View {
+    @EnvironmentObject var syncService: SyncService
     @State private var observations: [SavedObservation] = []
     @State private var showExportSheet = false
 
@@ -43,6 +44,11 @@ struct ObservationHistoryView: View {
         }
         .onAppear {
             loadObservations()
+        }
+        .onChange(of: syncService.syncState) { _, state in
+            if case .completed = state {
+                loadObservations()
+            }
         }
     }
 
@@ -125,16 +131,23 @@ struct ObservationRow: View {
 
             Spacer()
 
-            // Confidence badge
-            if let primary, primary.confidenceScore > 0 {
-                Text("\(Int(primary.confidenceScore * 100))%")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.green.opacity(0.2))
-                    .foregroundColor(.green)
-                    .cornerRadius(6)
+            VStack(spacing: 6) {
+                // Confidence badge
+                if let primary, primary.confidenceScore > 0 {
+                    Text("\(Int(primary.confidenceScore * 100))%")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.green.opacity(0.2))
+                        .foregroundColor(.green)
+                        .cornerRadius(6)
+                }
+
+                // Sync status icon
+                Image(systemName: observation.synced ? "icloud.fill" : "icloud.slash")
+                    .font(.caption2)
+                    .foregroundColor(observation.synced ? .green : Color(.systemGray3))
             }
         }
         .padding(.vertical, 4)

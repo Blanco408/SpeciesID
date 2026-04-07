@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var authManager: AuthenticationManager
+    @EnvironmentObject var syncService: SyncService
     @State private var selectedTab: Tab = .home
 
     enum Tab: String {
@@ -64,4 +65,5 @@ struct MainTabView: View {
 #Preview {
     MainTabView()
         .environmentObject(AuthenticationManager())
+        .environmentObject(SyncService())
 }
