@@ -4,6 +4,10 @@ import CoreLocation
 import Combine
 import AVFoundation
 
+extension Notification.Name {
+    static let observationSaved = Notification.Name("observationSaved")
+}
+
 struct CameraView: View {
     @StateObject private var locationManager = LocationManager()
     @StateObject private var classifier = SpeciesClassifierService()
@@ -261,6 +265,7 @@ struct CameraView: View {
             DispatchQueue.main.async {
                 isSaving = false
                 showSaved = true
+                NotificationCenter.default.post(name: .observationSaved, object: nil)
             }
         }
     }
