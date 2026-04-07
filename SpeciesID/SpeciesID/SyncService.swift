@@ -39,6 +39,7 @@ final class SyncService: ObservableObject {
     // MARK: - Orchestrator
 
     func sync(userId: String) async {
+        guard syncState != .syncing else { return }
         syncState = .syncing
         do {
             try await syncObservations(userId: userId)

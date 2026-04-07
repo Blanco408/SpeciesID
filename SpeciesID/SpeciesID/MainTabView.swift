@@ -59,15 +59,11 @@ struct MainTabView: View {
         .onAppear {
             AppColors.configureTabBarAppearance()
         }
-        .task {
-            if let uid = authManager.currentUser?.uid {
-                await syncService.sync(userId: uid)
-            }
-        }
     }
 }
 
 #Preview {
     MainTabView()
         .environmentObject(AuthenticationManager())
+        .environmentObject(SyncService())
 }

@@ -35,6 +35,11 @@ struct SpeciesIDApp: App {
             .onAppear {
                 authManager.setup()
             }
+            .onChange(of: authManager.currentUser?.uid) { _, uid in
+                if let uid {
+                    Task { await syncService.sync(userId: uid) }
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 if let uid = authManager.currentUser?.uid {
                     Task { await syncService.sync(userId: uid) }

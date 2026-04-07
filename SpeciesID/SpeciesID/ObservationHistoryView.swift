@@ -45,7 +45,7 @@ struct ObservationHistoryView: View {
         .onAppear {
             loadObservations()
         }
-        .onChange(of: syncService.syncState) { state in
+        .onChange(of: syncService.syncState) { _, state in
             if case .completed = state {
                 loadObservations()
             }
