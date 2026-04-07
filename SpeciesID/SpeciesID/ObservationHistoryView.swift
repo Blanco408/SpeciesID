@@ -45,6 +45,9 @@ struct ObservationHistoryView: View {
         .onAppear {
             loadObservations()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .observationSaved)) { _ in
+            loadObservations()
+        }
         .onChange(of: syncService.syncState) { _, state in
             if case .completed = state {
                 loadObservations()
