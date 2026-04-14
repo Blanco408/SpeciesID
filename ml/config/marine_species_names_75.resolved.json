@@ -1,0 +1,468 @@
+{
+  "quality_grade": "research",
+  "require_geotag": true,
+  "classes": [
+    {
+      "label": "seahare",
+      "taxon_id": 48655,
+      "taxon_name": "Aplysia californica",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "sea_cucumber",
+      "taxon_id": 47720,
+      "taxon_name": "Holothuroidea",
+      "taxon_rank": "class",
+      "max_images": 500
+    },
+    {
+      "label": "brittlestar",
+      "taxon_id": 48836,
+      "taxon_name": "Ophiuroidea",
+      "taxon_rank": "class",
+      "max_images": 500
+    },
+    {
+      "label": "bat_star",
+      "taxon_id": 48830,
+      "taxon_name": "Patiria miniata",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "ochre_sea_star",
+      "taxon_id": 49699,
+      "taxon_name": "Pisaster ochraceus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "purple_sea_urchin",
+      "taxon_id": 48035,
+      "taxon_name": "Strongylocentrotus purpuratus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "red_sea_urchin",
+      "taxon_id": 992313,
+      "taxon_name": "Mesocentrotus franciscanus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "giant_green_anemone",
+      "taxon_id": 51659,
+      "taxon_name": "Anthopleura xanthogrammica",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "aggregating_anemone",
+      "taxon_id": 52564,
+      "taxon_name": "Anthopleura elegantissima",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "california_mussel",
+      "taxon_id": 62806,
+      "taxon_name": "Mytilus californianus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "red_abalone",
+      "taxon_id": 56652,
+      "taxon_name": "Haliotis rufescens",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "owl_limpet",
+      "taxon_id": 53750,
+      "taxon_name": "Lottia gigantea",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "gooseneck_barnacle",
+      "taxon_id": 48786,
+      "taxon_name": "Pollicipes polymerus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "acorn_barnacle",
+      "taxon_id": 81610,
+      "taxon_name": "Balanus glandula",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "kelp_crab",
+      "taxon_id": 49723,
+      "taxon_name": "Pugettia producta",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "red_rock_crab",
+      "taxon_id": 47826,
+      "taxon_name": "Cancer productus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "blueband_hermit_crab",
+      "taxon_id": 49095,
+      "taxon_name": "Pagurus samuelis",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "east_pacific_red_octopus",
+      "taxon_id": 47455,
+      "taxon_name": "Octopus rubescens",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "sea_lemon_nudibranch",
+      "taxon_id": 474590,
+      "taxon_name": "Doriopsilla albopunctata",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "spanish_shawl_nudibranch",
+      "taxon_id": 194495,
+      "taxon_name": "Flabellinopsis iodinea",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "sunflower_sea_star",
+      "taxon_id": 47673,
+      "taxon_name": "Pycnopodia helianthoides",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "leather_star",
+      "taxon_id": 63382,
+      "taxon_name": "Dermasterias imbricata",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "blood_star",
+      "taxon_id": 47664,
+      "taxon_name": "Henricia leviuscula",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "sand_dollar",
+      "taxon_id": 117696,
+      "taxon_name": "Dendraster excentricus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "giant_spined_sea_star",
+      "taxon_id": 48833,
+      "taxon_name": "Pisaster giganteus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "black_turban_snail",
+      "taxon_id": 460365,
+      "taxon_name": "Tegula funebralis",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "wavy_turban_snail",
+      "taxon_id": 121180,
+      "taxon_name": "Megastraea undosa",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "giant_keyhole_limpet",
+      "taxon_id": 48645,
+      "taxon_name": "Megathura crenulata",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "lined_chiton",
+      "taxon_id": 47425,
+      "taxon_name": "Tonicella lineata",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "gumboot_chiton",
+      "taxon_id": 49053,
+      "taxon_name": "Cryptochiton stelleri",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "norris_topsnail",
+      "taxon_id": 428550,
+      "taxon_name": "Norrisia norrisii",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "california_cone_snail",
+      "taxon_id": 499874,
+      "taxon_name": "Californiconus californicus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "two_spot_octopus",
+      "taxon_id": 54509,
+      "taxon_name": "Octopus bimaculoides",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "striped_shore_crab",
+      "taxon_id": 47188,
+      "taxon_name": "Pachygrapsus crassipes",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "purple_shore_crab",
+      "taxon_id": 48342,
+      "taxon_name": "Hemigrapsus nudus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "california_spiny_lobster",
+      "taxon_id": 61371,
+      "taxon_name": "Panulirus interruptus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "porcelain_crab",
+      "taxon_id": 53620,
+      "taxon_name": "Petrolisthes cinctipes",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "decorator_crab",
+      "taxon_id": 68880,
+      "taxon_name": "Loxorhynchus crispatus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "strawberry_anemone",
+      "taxon_id": 124499,
+      "taxon_name": "Corynactis californica",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "sunburst_anemone",
+      "taxon_id": 49051,
+      "taxon_name": "Anthopleura sola",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "moonglow_anemone",
+      "taxon_id": 51658,
+      "taxon_name": "Anthopleura artemisia",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "moon_jelly",
+      "taxon_id": 48328,
+      "taxon_name": "Aurelia aurita",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "purple_striped_jelly",
+      "taxon_id": 69839,
+      "taxon_name": "Chrysaora colorata",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "by_the_wind_sailor",
+      "taxon_id": 59698,
+      "taxon_name": "Velella velella",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "garibaldi",
+      "taxon_id": 53693,
+      "taxon_name": "Hypsypops rubicundus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "california_sheephead",
+      "taxon_id": 1439813,
+      "taxon_name": "Bodianus pulcher",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "tidepool_sculpin",
+      "taxon_id": 67629,
+      "taxon_name": "Oligocottus maculosus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "opaleye",
+      "taxon_id": 81963,
+      "taxon_name": "Girella nigricans",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "senoritas",
+      "taxon_id": 1316645,
+      "taxon_name": "Halichoeres californicus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "giant_kelp",
+      "taxon_id": 124748,
+      "taxon_name": "Macrocystis pyrifera",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "feather_boa_kelp",
+      "taxon_id": 67419,
+      "taxon_name": "Egregia menziesii",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "sea_lettuce",
+      "taxon_id": 67423,
+      "taxon_name": "Ulva lactuca",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "coralline_algae",
+      "taxon_id": 117827,
+      "taxon_name": "Corallinales",
+      "taxon_rank": "order",
+      "max_images": 500
+    },
+    {
+      "label": "surfgrass",
+      "taxon_id": 72297,
+      "taxon_name": "Phyllospadix",
+      "taxon_rank": "genus",
+      "max_images": 500
+    },
+    {
+      "label": "sea_palm",
+      "taxon_id": 1267793,
+      "taxon_name": "Postelsia palmiformis",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "pacific_harbor_seal",
+      "taxon_id": 41708,
+      "taxon_name": "Phoca vitulina",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "california_sea_lion",
+      "taxon_id": 41740,
+      "taxon_name": "Zalophus californianus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "sea_otter",
+      "taxon_id": 41860,
+      "taxon_name": "Enhydra lutris",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "turban_snail",
+      "taxon_id": 53831,
+      "taxon_name": "Tegula",
+      "taxon_rank": "genus",
+      "max_images": 500
+    },
+    {
+      "label": "opalescent_nudibranch",
+      "taxon_id": 494603,
+      "taxon_name": "Hermissenda opalescens",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "hopkins_rose_nudibranch",
+      "taxon_id": 1520980,
+      "taxon_name": "Ceratodoris rosacea",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "navanax",
+      "taxon_id": 49848,
+      "taxon_name": "Navanax inermis",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "giant_pacific_octopus",
+      "taxon_id": 48863,
+      "taxon_name": "Enteroctopus dofleini",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "rock_scallop",
+      "taxon_id": 54526,
+      "taxon_name": "Crassadoma gigantea",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "bay_mussel",
+      "taxon_id": 130239,
+      "taxon_name": "Mytilus trossulus",
+      "taxon_rank": "species",
+      "max_images": 500
+    },
+    {
+      "label": "lewis_moon_snail",
+      "taxon_id": 447427,
+      "taxon_name": "Neverita lewisii",
+      "taxon_rank": "species",
+      "max_images": 500
+    }
+  ]
+}

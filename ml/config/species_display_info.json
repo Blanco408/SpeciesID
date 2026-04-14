@@ -1,0 +1,122 @@
+{
+  "seahare": {
+    "displayName": "California Seahare",
+    "scientificName": "Aplysia californica",
+    "iconName": "hare.fill",
+    "category": "Mollusks"
+  },
+  "brittlestar": {
+    "displayName": "Brittle Star",
+    "scientificName": "Ophiuroidea",
+    "iconName": "sparkles",
+    "category": "Echinoderms"
+  },
+  "sea_cucumber": {
+    "displayName": "Sea Cucumber",
+    "scientificName": "Holothuroidea",
+    "iconName": "capsule.fill",
+    "category": "Echinoderms"
+  },
+  "bat_star": {
+    "displayName": "Bat Star",
+    "scientificName": "Patiria miniata",
+    "iconName": "star.fill",
+    "category": "Echinoderms"
+  },
+  "ochre_sea_star": {
+    "displayName": "Ochre Sea Star",
+    "scientificName": "Pisaster ochraceus",
+    "iconName": "star.circle.fill",
+    "category": "Echinoderms"
+  },
+  "purple_sea_urchin": {
+    "displayName": "Purple Sea Urchin",
+    "scientificName": "Strongylocentrotus purpuratus",
+    "iconName": "circle.hexagongrid.fill",
+    "category": "Echinoderms"
+  },
+  "red_sea_urchin": {
+    "displayName": "Red Sea Urchin",
+    "scientificName": "Mesocentrotus franciscanus",
+    "iconName": "circle.dashed",
+    "category": "Echinoderms"
+  },
+  "giant_green_anemone": {
+    "displayName": "Giant Green Anemone",
+    "scientificName": "Anthopleura xanthogrammica",
+    "iconName": "sun.max.fill",
+    "category": "Cnidarians"
+  },
+  "aggregating_anemone": {
+    "displayName": "Aggregating Anemone",
+    "scientificName": "Anthopleura elegantissima",
+    "iconName": "sun.max.circle.fill",
+    "category": "Cnidarians"
+  },
+  "california_mussel": {
+    "displayName": "California Mussel",
+    "scientificName": "Mytilus californianus",
+    "iconName": "drop.fill",
+    "category": "Mollusks"
+  },
+  "red_abalone": {
+    "displayName": "Red Abalone",
+    "scientificName": "Haliotis rufescens",
+    "iconName": "oval.fill",
+    "category": "Mollusks"
+  },
+  "owl_limpet": {
+    "displayName": "Owl Limpet",
+    "scientificName": "Lottia gigantea",
+    "iconName": "oval.portrait.fill",
+    "category": "Mollusks"
+  },
+  "gooseneck_barnacle": {
+    "displayName": "Gooseneck Barnacle",
+    "scientificName": "Pollicipes polymerus",
+    "iconName": "circle.grid.cross.fill",
+    "category": "Crustaceans"
+  },
+  "acorn_barnacle": {
+    "displayName": "Acorn Barnacle",
+    "scientificName": "Balanus glandula",
+    "iconName": "circle.grid.2x2.fill",
+    "category": "Crustaceans"
+  },
+  "kelp_crab": {
+    "displayName": "Kelp Crab",
+    "scientificName": "Pugettia producta",
+    "iconName": "water.waves",
+    "category": "Crustaceans"
+  },
+  "red_rock_crab": {
+    "displayName": "Red Rock Crab",
+    "scientificName": "Cancer productus",
+    "iconName": "water.waves.and.arrow.up",
+    "category": "Crustaceans"
+  },
+  "blueband_hermit_crab": {
+    "displayName": "Blueband Hermit Crab",
+    "scientificName": "Pagurus samuelis",
+    "iconName": "snail.fill",
+    "category": "Crustaceans"
+  },
+  "east_pacific_red_octopus": {
+    "displayName": "East Pacific Red Octopus",
+    "scientificName": "Octopus rubescens",
+    "iconName": "hands.sparkles.fill",
+    "category": "Cephalopods"
+  },
+  "sea_lemon_nudibranch": {
+    "displayName": "Sea Lemon Nudibranch",
+    "scientificName": "Doriopsilla albopunctata",
+    "iconName": "leaf.fill",
+    "category": "Mollusks"
+  },
+  "spanish_shawl_nudibranch": {
+    "displayName": "Spanish Shawl Nudibranch",
+    "scientificName": "Flabellinopsis iodinea",
+    "iconName": "flame.fill",
+    "category": "Mollusks"
+  }
+}

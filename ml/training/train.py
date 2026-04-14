@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Train MobileNetV3-Small for species classification.
+Train a species classification model.
 
 Usage:
     python -m ml.training.train
     python -m ml.training.train --epochs 30 --batch-size 32
+    python -m ml.training.train --architecture efficientnet_b0 --experiment-name effnet_run1
 """
 
 import os
@@ -13,6 +14,7 @@ import argparse
 import time
 import json
 from collections import defaultdict
+from datetime import datetime, timezone
 
 import torch
 import torch.nn as nn
@@ -32,7 +34,8 @@ from ml.training.dataset import (
     get_train_transforms,
     get_val_transforms,
 )
-from ml.training.model import create_model
+from ml.training.model import create_model, SUPPORTED_ARCHITECTURES
+from ml.training.metrics import compute_metrics, compute_macro_f1
 
 ML_DIR = os.path.join(PROJECT_ROOT, "ml")
 DEFAULT_SPLITS_DIR = os.path.join(ML_DIR, "data", "splits")
@@ -92,7 +95,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device, scaler=None):
 
 @torch.no_grad()
 def validate(model, loader, criterion, device, idx_to_class: dict[int, str], num_classes: int):
-    """Validate model. Returns loss, accuracy, and per-class metrics."""
+    """Validate model. Returns loss, accuracy, per-class accuracy, and macro-F1."""
     model.eval()
     running_loss = 0.0
     correct = 0
@@ -100,6 +103,9 @@ def validate(model, loader, criterion, device, idx_to_class: dict[int, str], num
 
     class_correct = defaultdict(int)
     class_total = defaultdict(int)
+
+    all_preds = []
+    all_labels = []
 
     for images, labels in loader:
         images, labels = images.to(device), labels.to(device)
@@ -110,6 +116,9 @@ def validate(model, loader, criterion, device, idx_to_class: dict[int, str], num
         _, predicted = outputs.max(1)
         total += labels.size(0)
         correct += predicted.eq(labels).sum().item()
+
+        all_preds.extend(predicted.cpu().tolist())
+        all_labels.extend(labels.cpu().tolist())
 
         for pred, label in zip(predicted, labels):
             class_total[label.item()] += 1
@@ -126,7 +135,11 @@ def validate(model, loader, criterion, device, idx_to_class: dict[int, str], num
         correct_c = class_correct.get(idx, 0)
         per_class[class_name] = correct_c / total_c if total_c > 0 else 0.0
 
-    return avg_loss, accuracy, per_class
+    # Compute macro-F1 via shared metrics module
+    per_class_metrics = compute_metrics(all_preds, all_labels, idx_to_class, num_classes)
+    macro_f1 = compute_macro_f1(per_class_metrics)
+
+    return avg_loss, accuracy, per_class, macro_f1
 
 
 def save_training_curves(train_losses, val_losses, train_accs, val_accs, output_path):
@@ -175,7 +188,22 @@ def main():
     parser.add_argument("--patience", type=int, default=7, help="Early stopping patience")
     parser.add_argument("--warmup-epochs", type=int, default=2)
     parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument(
+        "--architecture",
+        default="mobilenet_v3_small",
+        choices=SUPPORTED_ARCHITECTURES,
+        help="Model architecture to train",
+    )
+    parser.add_argument(
+        "--experiment-name",
+        default=None,
+        help="Experiment name; if provided, outputs go to ml/models/{experiment_name}/",
+    )
     args = parser.parse_args()
+
+    # Override output dir if experiment name is provided
+    if args.experiment_name:
+        args.output_dir = os.path.join(ML_DIR, "models", args.experiment_name)
 
     os.makedirs(args.output_dir, exist_ok=True)
     os.makedirs(args.plots_dir, exist_ok=True)
@@ -236,8 +264,10 @@ def main():
     )
 
     # Model
-    print(f"\nCreating MobileNetV3-Small (pretrained=True, classes={num_classes})")
-    model = create_model(num_classes=num_classes, pretrained=True)
+    print(f"\nCreating {args.architecture} (pretrained=True, classes={num_classes})")
+    model = create_model(
+        num_classes=num_classes, pretrained=True, architecture=args.architecture
+    )
     model = model.to(device)
 
     # Class weights for imbalanced data
@@ -256,9 +286,13 @@ def main():
 
     # Training loop
     best_val_acc = 0.0
+    best_macro_f1 = 0.0
+    best_epoch = 0
     patience_counter = 0
     train_losses, val_losses = [], []
     train_accs, val_accs = [], []
+
+    training_start_time = time.time()
 
     print(f"\nTraining for up to {args.epochs} epochs (patience={args.patience})")
     print(f"{'='*70}")
@@ -275,7 +309,7 @@ def main():
         train_loss, train_acc = train_one_epoch(
             model, train_loader, criterion, optimizer, device, scaler
         )
-        val_loss, val_acc, per_class = validate(
+        val_loss, val_acc, per_class, macro_f1 = validate(
             model,
             val_loader,
             criterion,
@@ -298,16 +332,18 @@ def main():
         # Print epoch results
         print(f"Epoch {epoch:3d}/{args.epochs} | "
               f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
-              f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f} | "
+              f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f} F1: {macro_f1:.4f} | "
               f"LR: {lr:.6f} | {elapsed:.1f}s")
 
         # Per-class accuracy
         per_class_str = " | ".join(f"{name}: {acc:.3f}" for name, acc in per_class.items())
         print(f"         Per-class: {per_class_str}")
 
-        # Save best model
-        if val_acc > best_val_acc:
+        # Save best model (use macro-F1 as criterion for better imbalanced-class handling)
+        if macro_f1 > best_macro_f1:
+            best_macro_f1 = macro_f1
             best_val_acc = val_acc
+            best_epoch = epoch
             patience_counter = 0
             checkpoint = {
                 "epoch": epoch,
@@ -315,12 +351,14 @@ def main():
                 "optimizer_state_dict": optimizer.state_dict(),
                 "val_acc": val_acc,
                 "val_loss": val_loss,
+                "macro_f1": macro_f1,
                 "class_to_idx": class_to_idx,
                 "idx_to_class": idx_to_class,
+                "architecture": args.architecture,
             }
             best_path = os.path.join(args.output_dir, "best_model.pth")
             torch.save(checkpoint, best_path)
-            print(f"         * Best model saved! (val_acc={val_acc:.4f})")
+            print(f"         * Best model saved! (macro_f1={macro_f1:.4f}, val_acc={val_acc:.4f})")
         else:
             patience_counter += 1
             if patience_counter >= args.patience:
@@ -334,10 +372,11 @@ def main():
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "val_acc": val_acc,
+                "architecture": args.architecture,
             }, ckpt_path)
 
     print(f"\n{'='*70}")
-    print(f"Training complete! Best validation accuracy: {best_val_acc:.4f}")
+    print(f"Training complete! Best macro-F1: {best_macro_f1:.4f} (val_acc: {best_val_acc:.4f})")
     print(f"Best model saved to: {os.path.join(args.output_dir, 'best_model.pth')}")
 
     class_map_path = os.path.join(args.output_dir, "class_to_idx.json")
@@ -348,6 +387,31 @@ def main():
     # Save training curves
     curves_path = os.path.join(args.plots_dir, "training_curves.png")
     save_training_curves(train_losses, val_losses, train_accs, val_accs, curves_path)
+
+    # Write experiment log
+    training_time_seconds = time.time() - training_start_time
+    experiment_log = {
+        "architecture": args.architecture,
+        "num_classes": num_classes,
+        "epochs_trained": epoch,
+        "best_epoch": best_epoch,
+        "best_val_acc": best_val_acc,
+        "best_macro_f1": best_macro_f1,
+        "hyperparameters": {
+            "batch_size": args.batch_size,
+            "lr": args.lr,
+            "weight_decay": args.weight_decay,
+            "label_smoothing": args.label_smoothing,
+            "patience": args.patience,
+            "warmup_epochs": args.warmup_epochs,
+        },
+        "training_time_seconds": round(training_time_seconds, 2),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    log_path = os.path.join(args.output_dir, "experiment_log.json")
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump(experiment_log, f, indent=2)
+    print(f"Experiment log saved to: {log_path}")
 
 
 if __name__ == "__main__":

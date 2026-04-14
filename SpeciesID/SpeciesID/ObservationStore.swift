@@ -227,6 +227,32 @@ class ObservationStore {
         identifications(for: observation).first
     }
 
+    func observationCount(for speciesId: String) -> Int {
+        let all = getAllObservations()
+        return all.filter { obs in
+            if let ids = identifications(for: obs).first {
+                return ids.speciesId == speciesId
+            }
+            return obs.speciesId == speciesId
+        }.count
+    }
+
+    func observationCounts() -> [String: Int] {
+        var counts: [String: Int] = [:]
+        for obs in getAllObservations() {
+            let species: String
+            if let primary = identifications(for: obs).first {
+                species = primary.speciesId
+            } else if let sid = obs.speciesId {
+                species = sid
+            } else {
+                continue
+            }
+            counts[species, default: 0] += 1
+        }
+        return counts
+    }
+
     private func save() {
         if context.hasChanges {
             try? context.save()

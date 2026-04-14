@@ -1,0 +1,185 @@
+{
+  "version": "2.1",
+  "species": [
+    {
+      "id": "seahare",
+      "displayName": "California Seahare",
+      "scientificName": "Aplysia californica",
+      "iconName": "hare.fill",
+      "category": "Mollusks",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/27139713/medium.jpeg",
+      "description": "A large sea slug found in kelp beds along the California coast. Can grow up to 75 cm and releases purple ink when disturbed."
+    },
+    {
+      "id": "sea_cucumber",
+      "displayName": "Sea Cucumber",
+      "scientificName": "Holothuroidea",
+      "iconName": "capsule.fill",
+      "category": "Echinoderms",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/47789199/medium.jpg",
+      "description": "Soft-bodied echinoderms found on the ocean floor. They play an important role in recycling nutrients in marine ecosystems."
+    },
+    {
+      "id": "brittlestar",
+      "displayName": "Brittle Star",
+      "scientificName": "Ophiuroidea",
+      "iconName": "sparkles",
+      "category": "Echinoderms",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/108603901/medium.jpg",
+      "description": "Related to sea stars but with long, thin, flexible arms. Often found hiding under rocks in tidepools."
+    },
+    {
+      "id": "bat_star",
+      "displayName": "Bat Star",
+      "scientificName": "Patiria miniata",
+      "iconName": "star.fill",
+      "category": "Echinoderms",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/127624366/medium.jpeg",
+      "description": "A colorful sea star with webbed arms resembling bat wings. Found in a variety of colors including orange, red, and purple."
+    },
+    {
+      "id": "ochre_sea_star",
+      "displayName": "Ochre Sea Star",
+      "scientificName": "Pisaster ochraceus",
+      "iconName": "star.circle.fill",
+      "category": "Echinoderms",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/248324436/medium.jpg",
+      "description": "A keystone predator of the Pacific coast. Found in purple, orange, and brown. Feeds primarily on mussels."
+    },
+    {
+      "id": "purple_sea_urchin",
+      "displayName": "Purple Sea Urchin",
+      "scientificName": "Strongylocentrotus purpuratus",
+      "iconName": "circle.hexagongrid.fill",
+      "category": "Echinoderms",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/338665145/medium.jpeg",
+      "description": "A small, spiny echinoderm that grazes on kelp. Overgrazing by purple urchins can create barren zones on rocky reefs."
+    },
+    {
+      "id": "red_sea_urchin",
+      "displayName": "Red Sea Urchin",
+      "scientificName": "Mesocentrotus franciscanus",
+      "iconName": "circle.dashed",
+      "category": "Echinoderms",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/484400937/medium.jpeg",
+      "description": "The largest sea urchin in the world, reaching up to 18 cm. Commercially harvested for its roe (uni)."
+    },
+    {
+      "id": "giant_green_anemone",
+      "displayName": "Giant Green Anemone",
+      "scientificName": "Anthopleura xanthogrammica",
+      "iconName": "sun.max.fill",
+      "category": "Cnidarians",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/3863/medium.jpg",
+      "description": "A large, bright green anemone found in tidepools. Its green color comes from symbiotic algae living in its tissues."
+    },
+    {
+      "id": "aggregating_anemone",
+      "displayName": "Aggregating Anemone",
+      "scientificName": "Anthopleura elegantissima",
+      "iconName": "sun.max.circle.fill",
+      "category": "Cnidarians",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/83191277/medium.jpg",
+      "description": "Small anemones that clone themselves to form dense colonies. Different colonies will fight each other for territory."
+    },
+    {
+      "id": "california_mussel",
+      "displayName": "California Mussel",
+      "scientificName": "Mytilus californianus",
+      "iconName": "drop.fill",
+      "category": "Mollusks",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/18322/medium.jpg",
+      "description": "Forms dense beds on rocky intertidal zones. A key foundation species providing habitat for many other organisms."
+    },
+    {
+      "id": "red_abalone",
+      "displayName": "Red Abalone",
+      "scientificName": "Haliotis rufescens",
+      "iconName": "oval.fill",
+      "category": "Mollusks",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/3647914/medium.JPG",
+      "description": "The largest abalone species in the world. Listed as critically endangered due to overharvesting and disease."
+    },
+    {
+      "id": "owl_limpet",
+      "displayName": "Owl Limpet",
+      "scientificName": "Lottia gigantea",
+      "iconName": "oval.portrait.fill",
+      "category": "Mollusks",
+      "referenceImageUrl": "https://static.inaturalist.org/photos/29487487/medium.jpeg",
+      "description": "A large territorial limpet that farms algae on its home scar. Can live for over 15 years."
+    },
+    {
+      "id": "gooseneck_barnacle",
+      "displayName": "Gooseneck Barnacle",
+      "scientificName": "Pollicipes polymerus",
+      "iconName": "circle.grid.cross.fill",
+      "category": "Crustaceans",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/81268996/medium.jpeg",
+      "description": "Stalked barnacles found in clusters on wave-exposed rocks. Considered a delicacy in some cuisines."
+    },
+    {
+      "id": "acorn_barnacle",
+      "displayName": "Acorn Barnacle",
+      "scientificName": "Balanus glandula",
+      "iconName": "circle.grid.2x2.fill",
+      "category": "Crustaceans",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/339584012/medium.jpeg",
+      "description": "Small, cone-shaped barnacles that form white bands on rocky shores. One of the most common intertidal organisms."
+    },
+    {
+      "id": "kelp_crab",
+      "displayName": "Kelp Crab",
+      "scientificName": "Pugettia producta",
+      "iconName": "water.waves",
+      "category": "Crustaceans",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/109877730/medium.jpg",
+      "description": "A spider crab commonly found in kelp forests. Changes color from green to red depending on diet."
+    },
+    {
+      "id": "red_rock_crab",
+      "displayName": "Red Rock Crab",
+      "scientificName": "Cancer productus",
+      "iconName": "water.waves.and.arrow.up",
+      "category": "Crustaceans",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/100280808/medium.jpeg",
+      "description": "A large, heavy-bodied crab found along the Pacific coast. Identified by its brick-red color and black-tipped claws."
+    },
+    {
+      "id": "blueband_hermit_crab",
+      "displayName": "Blueband Hermit Crab",
+      "scientificName": "Pagurus samuelis",
+      "iconName": "snail.fill",
+      "category": "Crustaceans",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/500996984/medium.jpg",
+      "description": "A small hermit crab identified by bright blue bands on its walking legs. Very common in California tidepools."
+    },
+    {
+      "id": "east_pacific_red_octopus",
+      "displayName": "East Pacific Red Octopus",
+      "scientificName": "Octopus rubescens",
+      "iconName": "hands.sparkles.fill",
+      "category": "Cephalopods",
+      "referenceImageUrl": "https://static.inaturalist.org/photos/8851952/medium.jpg",
+      "description": "A small, reddish octopus found in rocky reefs and tidepools. Highly intelligent with excellent camouflage abilities."
+    },
+    {
+      "id": "sea_lemon_nudibranch",
+      "displayName": "Sea Lemon Nudibranch",
+      "scientificName": "Doriopsilla albopunctata",
+      "iconName": "leaf.fill",
+      "category": "Mollusks",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/2324626/medium.jpg",
+      "description": "A yellow nudibranch with white spots. Feeds on sponges and is commonly found in rocky intertidal areas."
+    },
+    {
+      "id": "spanish_shawl_nudibranch",
+      "displayName": "Spanish Shawl Nudibranch",
+      "scientificName": "Flabellinopsis iodinea",
+      "iconName": "flame.fill",
+      "category": "Mollusks",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/6075229/medium.jpg",
+      "description": "A strikingly colorful nudibranch with a purple body and orange cerata. One of the most photographed sea slugs on the Pacific coast."
+    }
+  ]
+}

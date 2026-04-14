@@ -3,6 +3,7 @@ import PhotosUI
 import CoreLocation
 import Combine
 import AVFoundation
+import CoreImage
 
 extension Notification.Name {
     static let observationSaved = Notification.Name("observationSaved")
@@ -11,80 +12,227 @@ extension Notification.Name {
 struct CameraView: View {
     @StateObject private var locationManager = LocationManager()
     @StateObject private var classifier = SpeciesClassifierService()
+    @StateObject private var camera = CameraManager()
 
     @State private var selectedImage: UIImage?
     @State private var showImagePicker = false
-    @State private var showCamera = false
     @State private var showFullPhotoPreview = false
-    @State private var showCameraUnavailable = false
     @State private var notes = ""
     @State private var isSaving = false
     @State private var showSaved = false
     @State private var classificationResult: ClassificationResult?
+    @State private var scanLineOffset: CGFloat = 0
+    @State private var liveLabel: String = ""
+    @State private var liveConfidence: Double = 0
 
     var body: some View {
+        ZStack {
+            if selectedImage != nil {
+                resultView
+            } else {
+                liveCameraView
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showImagePicker) {
+            PhotoPicker(image: $selectedImage)
+        }
+        .sheet(isPresented: $showFullPhotoPreview) {
+            if let image = selectedImage {
+                FullPhotoPreviewView(
+                    image: image,
+                    detections: classificationResult?.detections ?? []
+                )
+            }
+        }
+        .alert("Saved!", isPresented: $showSaved) {
+            Button("OK") { resetForm() }
+        } message: {
+            Text("Observation saved locally.")
+        }
+        .onAppear {
+            locationManager.requestPermission()
+            if selectedImage == nil {
+                camera.start()
+            }
+        }
+        .onDisappear {
+            camera.stop()
+        }
+        .onChange(of: camera.frameCount) { _, _ in
+            guard selectedImage == nil,
+                  !classifier.isClassifying,
+                  let frame = camera.latestFrame else { return }
+            Task {
+                if let result = await classifier.classify(image: frame) {
+                    liveLabel = result.displayName
+                    liveConfidence = result.confidence
+                } else {
+                    liveLabel = ""
+                    liveConfidence = 0
+                }
+            }
+        }
+        .onChange(of: selectedImage) { _, newImage in
+            classificationResult = nil
+            if let image = newImage {
+                camera.stop()
+                Task {
+                    classificationResult = await classifier.classify(image: image)
+                }
+            }
+        }
+    }
+
+    // MARK: - Live Camera View
+
+    private var liveCameraView: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            // Live camera preview
+            CameraPreviewView(session: camera.session)
+                .ignoresSafeArea()
+
+            // Scanner overlay
+            ScannerOverlay(scanLineOffset: $scanLineOffset)
+                .ignoresSafeArea()
+
+            // Live classification pill
+            if !liveLabel.isEmpty {
+                VStack {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkle.magnifyingglass")
+                            .font(.caption.weight(.semibold))
+                        Text(liveLabel)
+                            .font(.subheadline.weight(.semibold))
+                        Text("\(Int(liveConfidence * 100))%")
+                            .font(.caption.weight(.medium))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.white.opacity(0.25))
+                            .cornerRadius(4)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(AppColors.darkGreen.opacity(0.85))
+                    .cornerRadius(24)
+                    .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
+
+                    Spacer()
+                }
+                .padding(.top, 60)
+                .animation(.easeInOut(duration: 0.3), value: liveLabel)
+            }
+
+            // Bottom controls
+            VStack {
+                Spacer()
+
+                // Status bar
+                HStack(spacing: 12) {
+                    // Model status
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(classifier.isModelLoaded ? Color.green : Color.orange)
+                            .frame(width: 6, height: 6)
+                        Text(classifier.isModelLoaded ? "AI Ready" : "Loading...")
+                            .font(.caption2.weight(.medium))
+                    }
+
+                    Spacer()
+
+                    // Location status
+                    HStack(spacing: 4) {
+                        Image(systemName: locationManager.location != nil ? "location.fill" : "location.slash")
+                            .font(.caption2)
+                        Text(locationManager.location != nil ? "GPS Locked" : "No GPS")
+                            .font(.caption2.weight(.medium))
+                    }
+
+                    Spacer()
+
+                    // Species count
+                    HStack(spacing: 4) {
+                        Image(systemName: "leaf.fill")
+                            .font(.caption2)
+                        Text("\(classifier.supportedSpecies.count) species")
+                            .font(.caption2.weight(.medium))
+                    }
+                }
+                .foregroundStyle(.white.opacity(0.8))
+                .padding(.horizontal, 24)
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial.opacity(0.6))
+
+                // Capture controls
+                HStack(alignment: .center, spacing: 40) {
+                    // Library button
+                    Button(action: { showImagePicker = true }) {
+                        VStack(spacing: 4) {
+                            Image(systemName: "photo.on.rectangle")
+                                .font(.system(size: 22))
+                            Text("Library")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(width: 60)
+                    }
+
+                    // Shutter button
+                    Button(action: capturePhoto) {
+                        ZStack {
+                            Circle()
+                                .stroke(.white, lineWidth: 4)
+                                .frame(width: 72, height: 72)
+                            Circle()
+                                .fill(.white)
+                                .frame(width: 60, height: 60)
+                            Image(systemName: "viewfinder")
+                                .font(.system(size: 24, weight: .semibold))
+                                .foregroundStyle(AppColors.darkGreen)
+                        }
+                    }
+
+                    // Flash placeholder for symmetry
+                    VStack(spacing: 4) {
+                        Image(systemName: "bolt.slash.fill")
+                            .font(.system(size: 22))
+                        Text("Flash")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.white.opacity(0.5))
+                    .frame(width: 60)
+                }
+                .padding(.vertical, 24)
+                .padding(.bottom, 8)
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                scanLineOffset = 1.0
+            }
+        }
+    }
+
+    // MARK: - Result View (after capture)
+
+    private var resultView: some View {
         ScrollView {
             VStack(spacing: 20) {
                 // Image preview
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6))
-                        .frame(height: 250)
-
                     if let image = selectedImage {
                         DetectionPreview(
                             image: image,
                             detections: classificationResult?.detections ?? []
                         )
-                        .frame(height: 250)
+                        .frame(height: 300)
                         .cornerRadius(12)
                         .onTapGesture {
                             showFullPhotoPreview = true
                         }
-                        .overlay(alignment: .bottomTrailing) {
-                            Label("Full", systemImage: "arrow.up.left.and.arrow.down.right")
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .background(.ultraThinMaterial, in: Capsule())
-                                .padding(10)
-                        }
-                    } else {
-                        VStack {
-                            Image(systemName: "camera.viewfinder")
-                                .font(.system(size: 50))
-                                .foregroundColor(.gray)
-                            Text("Take or select a photo")
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .padding(.horizontal)
-
-                if selectedImage != nil {
-                    Text("Tap photo to view full image")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                // Capture buttons
-                HStack(spacing: 16) {
-                    Button(action: openCamera) {
-                        Label("Camera", systemImage: "camera.fill")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(AppColors.darkGreen)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-
-                    Button(action: { showImagePicker = true }) {
-                        Label("Library", systemImage: "photo")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(Color(.systemGray5))
-                            .foregroundColor(.primary)
-                            .cornerRadius(10)
                     }
                 }
                 .padding(.horizontal)
@@ -104,7 +252,7 @@ struct CameraView: View {
                         scientificNameLookup: classifier.scientificName(for:)
                     )
                     .padding(.horizontal)
-                } else if let error = classifier.errorMessage, selectedImage != nil {
+                } else if let error = classifier.errorMessage {
                     HStack {
                         Image(systemName: "exclamationmark.triangle")
                             .foregroundColor(.orange)
@@ -116,29 +264,34 @@ struct CameraView: View {
                 }
 
                 // Notes field
-                if selectedImage != nil {
-                    TextField("Add notes (optional)", text: $notes)
-                        .textFieldStyle(.roundedBorder)
-                        .padding(.horizontal)
+                TextField("Add notes (optional)", text: $notes)
+                    .textFieldStyle(.roundedBorder)
+                    .padding(.horizontal)
 
-                    // Location status
-                    HStack {
-                        Image(systemName: locationManager.location != nil ? "location.fill" : "location.slash")
-                        Text(locationManager.locationText)
-                    }
-                    .font(.caption)
-                    .foregroundColor(locationManager.location != nil ? .green : .orange)
+                // Location
+                HStack {
+                    Image(systemName: locationManager.location != nil ? "location.fill" : "location.slash")
+                    Text(locationManager.locationText)
                 }
+                .font(.caption)
+                .foregroundColor(locationManager.location != nil ? .green : .orange)
 
-                Spacer(minLength: 20)
+                // Action buttons
+                HStack(spacing: 12) {
+                    Button(action: { resetForm(); camera.start() }) {
+                        Label("Retake", systemImage: "arrow.counterclockwise")
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color(.systemGray5))
+                            .foregroundColor(.primary)
+                            .cornerRadius(10)
+                    }
 
-                // Save button
-                if selectedImage != nil {
                     Button(action: saveObservation) {
                         if isSaving {
                             ProgressView().tint(.white)
                         } else {
-                            Text("Save Observation")
+                            Label("Save", systemImage: "checkmark.circle.fill")
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -146,72 +299,24 @@ struct CameraView: View {
                     .background(AppColors.darkGreen)
                     .foregroundColor(.white)
                     .cornerRadius(10)
-                    .padding(.horizontal)
                     .disabled(isSaving || classifier.isClassifying)
                 }
+                .padding(.horizontal)
+
+                Spacer(minLength: 20)
             }
             .padding(.vertical)
         }
-        .navigationTitle("Capture")
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showImagePicker) {
-            PhotoPicker(image: $selectedImage)
-        }
-        .sheet(isPresented: $showFullPhotoPreview) {
-            if let image = selectedImage {
-                FullPhotoPreviewView(
-                    image: image,
-                    detections: classificationResult?.detections ?? []
-                )
-            }
-        }
-        .fullScreenCover(isPresented: $showCamera) {
-            CameraCapture(image: $selectedImage)
-        }
-        .alert("Saved!", isPresented: $showSaved) {
-            Button("OK") { resetForm() }
-        } message: {
-            Text("Observation saved locally.")
-        }
-        .alert("Camera Unavailable", isPresented: $showCameraUnavailable) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Camera is not available. Try using the photo library instead.")
-        }
-        .onAppear {
-            locationManager.requestPermission()
-        }
-        .onChange(of: selectedImage) { _, newImage in
-            classificationResult = nil
-            if let image = newImage {
-                Task {
-                    classificationResult = await classifier.classify(image: image)
-                }
-            }
-        }
+        .navigationTitle("Identify")
     }
 
-    private func openCamera() {
-        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-            showCameraUnavailable = true
-            return
-        }
+    // MARK: - Actions
 
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized:
-            showCamera = true
-        case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .video) { granted in
-                DispatchQueue.main.async {
-                    if granted {
-                        showCamera = true
-                    } else {
-                        showCameraUnavailable = true
-                    }
-                }
+    private func capturePhoto() {
+        camera.capturePhoto { image in
+            DispatchQueue.main.async {
+                self.selectedImage = image
             }
-        default:
-            showCameraUnavailable = true
         }
     }
 
@@ -219,7 +324,6 @@ struct CameraView: View {
         guard let image = selectedImage else { return }
         isSaving = true
 
-        // Capture state on main thread before dispatching
         let lat = locationManager.location?.coordinate.latitude ?? 0
         let lon = locationManager.location?.coordinate.longitude ?? 0
         let identifications = classificationResult?.detections.map { detection in
@@ -274,6 +378,258 @@ struct CameraView: View {
         selectedImage = nil
         classificationResult = nil
         notes = ""
+        liveLabel = ""
+        liveConfidence = 0
+    }
+}
+
+// MARK: - Camera Manager (AVCaptureSession)
+
+class CameraManager: NSObject, ObservableObject {
+    let session = AVCaptureSession()
+    private let output = AVCapturePhotoOutput()
+    private let videoOutput = AVCaptureVideoDataOutput()
+    private let videoQueue = DispatchQueue(label: "com.speciesid.videoOutput", qos: .userInitiated)
+    private var photoCompletion: ((UIImage?) -> Void)?
+    private var isConfigured = false
+
+    /// The latest frame captured for live classification (published on main actor).
+    @Published var latestFrame: UIImage?
+    /// Incremented each time a new frame is published, to trigger SwiftUI onChange.
+    @Published var frameCount: Int = 0
+
+    /// Timestamp of last frame forwarded for classification (~2 fps throttle).
+    private nonisolated(unsafe) var lastFrameTime: CFAbsoluteTime = 0
+    private let frameCaptureInterval: CFAbsoluteTime = 0.5 // 2 fps
+
+    func start() {
+        guard !session.isRunning else { return }
+
+        if !isConfigured {
+            configure()
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.session.startRunning()
+        }
+    }
+
+    func stop() {
+        guard session.isRunning else { return }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.session.stopRunning()
+        }
+    }
+
+    func capturePhoto(completion: @escaping (UIImage?) -> Void) {
+        photoCompletion = completion
+        let settings = AVCapturePhotoSettings()
+        output.capturePhoto(with: settings, delegate: self)
+    }
+
+    private func configure() {
+        session.beginConfiguration()
+        session.sessionPreset = .photo
+
+        // Camera input
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+              let input = try? AVCaptureDeviceInput(device: device),
+              session.canAddInput(input) else {
+            session.commitConfiguration()
+            return
+        }
+        session.addInput(input)
+
+        // Photo output
+        guard session.canAddOutput(output) else {
+            session.commitConfiguration()
+            return
+        }
+        session.addOutput(output)
+
+        // Video data output for live classification
+        videoOutput.setSampleBufferDelegate(self, queue: videoQueue)
+        videoOutput.alwaysDiscardsLateVideoFrames = true
+        if session.canAddOutput(videoOutput) {
+            session.addOutput(videoOutput)
+        }
+
+        session.commitConfiguration()
+        isConfigured = true
+    }
+
+    // MARK: - Sample Buffer to UIImage
+
+    private nonisolated func imageFromSampleBuffer(_ sampleBuffer: CMSampleBuffer) -> UIImage? {
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return nil }
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+        let context = CIContext()
+        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
+        return UIImage(cgImage: cgImage)
+    }
+}
+
+extension CameraManager: AVCapturePhotoCaptureDelegate {
+    nonisolated func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        guard let data = photo.fileDataRepresentation(),
+              let image = UIImage(data: data) else {
+            DispatchQueue.main.async { [weak self] in
+                self?.photoCompletion?(nil)
+            }
+            return
+        }
+        DispatchQueue.main.async { [weak self] in
+            self?.photoCompletion?(image)
+        }
+    }
+}
+
+extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
+    nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        let now = CFAbsoluteTimeGetCurrent()
+        guard now - lastFrameTime >= frameCaptureInterval else { return }
+        lastFrameTime = now
+
+        guard let image = imageFromSampleBuffer(sampleBuffer) else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.latestFrame = image
+            self?.frameCount += 1
+        }
+    }
+}
+
+// MARK: - Camera Preview (UIViewRepresentable)
+
+struct CameraPreviewView: UIViewRepresentable {
+    let session: AVCaptureSession
+
+    func makeUIView(context: Context) -> UIView {
+        let view = CameraPreviewUIView()
+        view.previewLayer.session = session
+        view.previewLayer.videoGravity = .resizeAspectFill
+        view.backgroundColor = .black
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {}
+
+    class CameraPreviewUIView: UIView {
+        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+        var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+    }
+}
+
+// MARK: - Scanner Overlay
+
+struct ScannerOverlay: View {
+    @Binding var scanLineOffset: CGFloat
+
+    var body: some View {
+        GeometryReader { geometry in
+            let size = min(geometry.size.width, geometry.size.height) * 0.7
+            let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2 - 40)
+
+            ZStack {
+                // Dim area outside scan region
+                ScannerMask(center: center, size: size)
+                    .fill(style: FillStyle(eoFill: true))
+                    .foregroundStyle(.black.opacity(0.4))
+
+                // Corner brackets
+                ScannerCorners(center: center, size: size)
+                    .stroke(AppColors.darkGreen, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+
+                // Scanning line
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.clear, AppColors.darkGreen.opacity(0.6), .clear],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: size - 20, height: 2)
+                    .position(
+                        x: center.x,
+                        y: center.y - size / 2 + scanLineOffset * size
+                    )
+
+                // Label
+                Text("SPECIES SCAN")
+                    .font(.caption.weight(.bold).monospaced())
+                    .tracking(3)
+                    .foregroundStyle(AppColors.darkGreen)
+                    .position(x: center.x, y: center.y + size / 2 + 24)
+            }
+        }
+    }
+}
+
+// Mask that dims everything outside the scan area
+struct ScannerMask: Shape {
+    let center: CGPoint
+    let size: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addRect(rect)
+
+        let scanRect = CGRect(
+            x: center.x - size / 2,
+            y: center.y - size / 2,
+            width: size,
+            height: size
+        )
+        path.addRoundedRect(in: scanRect, cornerSize: CGSize(width: 16, height: 16))
+        return path
+    }
+}
+
+// Corner bracket shapes
+struct ScannerCorners: Shape {
+    let center: CGPoint
+    let size: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let half = size / 2
+        let cornerLen: CGFloat = 30
+        let r: CGFloat = 12
+
+        let topLeft = CGPoint(x: center.x - half, y: center.y - half)
+        let topRight = CGPoint(x: center.x + half, y: center.y - half)
+        let bottomLeft = CGPoint(x: center.x - half, y: center.y + half)
+        let bottomRight = CGPoint(x: center.x + half, y: center.y + half)
+
+        // Top-left
+        path.move(to: CGPoint(x: topLeft.x, y: topLeft.y + cornerLen))
+        path.addLine(to: CGPoint(x: topLeft.x, y: topLeft.y + r))
+        path.addQuadCurve(to: CGPoint(x: topLeft.x + r, y: topLeft.y),
+                          control: topLeft)
+        path.addLine(to: CGPoint(x: topLeft.x + cornerLen, y: topLeft.y))
+
+        // Top-right
+        path.move(to: CGPoint(x: topRight.x - cornerLen, y: topRight.y))
+        path.addLine(to: CGPoint(x: topRight.x - r, y: topRight.y))
+        path.addQuadCurve(to: CGPoint(x: topRight.x, y: topRight.y + r),
+                          control: topRight)
+        path.addLine(to: CGPoint(x: topRight.x, y: topRight.y + cornerLen))
+
+        // Bottom-left
+        path.move(to: CGPoint(x: bottomLeft.x, y: bottomLeft.y - cornerLen))
+        path.addLine(to: CGPoint(x: bottomLeft.x, y: bottomLeft.y - r))
+        path.addQuadCurve(to: CGPoint(x: bottomLeft.x + r, y: bottomLeft.y),
+                          control: bottomLeft)
+        path.addLine(to: CGPoint(x: bottomLeft.x + cornerLen, y: bottomLeft.y))
+
+        // Bottom-right
+        path.move(to: CGPoint(x: bottomRight.x - cornerLen, y: bottomRight.y))
+        path.addLine(to: CGPoint(x: bottomRight.x - r, y: bottomRight.y))
+        path.addQuadCurve(to: CGPoint(x: bottomRight.x, y: bottomRight.y - r),
+                          control: bottomRight)
+        path.addLine(to: CGPoint(x: bottomRight.x, y: bottomRight.y - cornerLen))
+
+        return path
     }
 }
 
@@ -348,21 +704,11 @@ private struct DetectionOverlay: View {
         if imageAspect > canvasAspect {
             let width = canvasSize.width
             let height = width / imageAspect
-            return CGRect(
-                x: 0,
-                y: (canvasSize.height - height) / 2.0,
-                width: width,
-                height: height
-            )
+            return CGRect(x: 0, y: (canvasSize.height - height) / 2.0, width: width, height: height)
         } else {
             let height = canvasSize.height
             let width = height * imageAspect
-            return CGRect(
-                x: (canvasSize.width - width) / 2.0,
-                y: 0,
-                width: width,
-                height: height
-            )
+            return CGRect(x: (canvasSize.width - width) / 2.0, y: 0, width: width, height: height)
         }
     }
 }
@@ -395,9 +741,7 @@ private struct FullPhotoPreviewView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
+                    Button("Done") { dismiss() }
                 }
             }
         }
@@ -436,50 +780,6 @@ struct PhotoPicker: UIViewControllerRepresentable {
                     self.parent.image = image as? UIImage
                 }
             }
-        }
-    }
-}
-
-// MARK: - Camera Capture
-
-struct CameraCapture: UIViewControllerRepresentable {
-    @Binding var image: UIImage?
-    @Environment(\.dismiss) var dismiss
-
-    static var isAvailable: Bool {
-        UIImagePickerController.isSourceTypeAvailable(.camera)
-    }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-            let vc = UIViewController()
-            DispatchQueue.main.async {
-                self.dismiss()
-            }
-            return vc
-        }
-
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: CameraCapture
-        init(_ parent: CameraCapture) { self.parent = parent }
-
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            parent.image = info[.originalImage] as? UIImage
-            parent.dismiss()
-        }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
         }
     }
 }

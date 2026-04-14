@@ -5,29 +5,49 @@ struct ObservationHistoryView: View {
     @EnvironmentObject var syncService: SyncService
     @State private var observations: [SavedObservation] = []
     @State private var showExportSheet = false
+    @State private var showMap = false
 
     var body: some View {
-        Group {
-            if observations.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "binoculars")
-                        .font(.system(size: 60))
-                        .foregroundColor(.gray)
-                    Text("No observations yet")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                    Text("Capture your first species sighting!")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
+        VStack(spacing: 0) {
+            // List / Map toggle
+            Picker("View", selection: $showMap) {
+                Label("List", systemImage: "list.bullet")
+                    .tag(false)
+                Label("Map", systemImage: "map")
+                    .tag(true)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if showMap {
+                ObservationMapView()
             } else {
-                List {
-                    ForEach(observations, id: \.id) { observation in
-                        ObservationRow(observation: observation)
+                Group {
+                    if observations.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: "binoculars")
+                                .font(.system(size: 60))
+                                .foregroundColor(.gray)
+                            Text("No observations yet")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                            Text("Capture your first species sighting!")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    } else {
+                        List {
+                            ForEach(observations, id: \.id) { observation in
+                                NavigationLink(destination: ObservationDetailView(observation: observation)) {
+                                    ObservationRow(observation: observation)
+                                }
+                            }
+                            .onDelete(perform: deleteObservations)
+                        }
+                        .listStyle(.plain)
                     }
-                    .onDelete(perform: deleteObservations)
                 }
-                .listStyle(.plain)
             }
         }
         .navigationTitle("Observations")

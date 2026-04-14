@@ -46,10 +46,17 @@ class NormalizedModel(torch.nn.Module):
 def convert_to_coreml(model_path: str, output_path: str):
     """Convert PyTorch model to Core ML with optimizations."""
     print(f"Loading PyTorch model from {model_path}")
+
+    # Read architecture from checkpoint so the correct backbone is instantiated
+    checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
+    architecture = checkpoint.get("architecture", "mobilenet_v3_small")
+    print(f"Architecture: {architecture}")
+
     model, class_to_idx = load_trained_model(
         model_path,
         device="cpu",
         return_class_mapping=True,
+        architecture=architecture,
     )
     model.eval()
     idx_to_class = {idx: label for label, idx in class_to_idx.items()}

@@ -149,7 +149,7 @@ class ExportService: ObservableObject {
         let notes: String?
     }
 
-    private func generateCSVFromSnapshots(_ snapshots: [ObsSnapshot], directory: URL) {
+    private nonisolated func generateCSVFromSnapshots(_ snapshots: [ObsSnapshot], directory: URL) {
         let fileURL = directory.appendingPathComponent("observations.csv")
 
         var csvContent = "species_name,all_species,species_count,date,time,latitude,longitude,confidence,photo_filename,notes\n"
@@ -180,7 +180,7 @@ class ExportService: ObservableObject {
 
     // MARK: - JSON Generation (from snapshots, safe for background thread)
 
-    private func generateJSONFromSnapshots(_ snapshots: [ObsSnapshot], directory: URL) {
+    private nonisolated func generateJSONFromSnapshots(_ snapshots: [ObsSnapshot], directory: URL) {
         let fileURL = directory.appendingPathComponent("observations.json")
 
         let dateFormatter = DateFormatter()
@@ -252,7 +252,7 @@ class ExportService: ObservableObject {
 
     // MARK: - Zip Archive
 
-    private func createZipArchive(source: URL, destination: URL) -> Bool {
+    private nonisolated func createZipArchive(source: URL, destination: URL) -> Bool {
         let coordinator = NSFileCoordinator()
         var error: NSError?
         var success = false
@@ -279,7 +279,7 @@ class ExportService: ObservableObject {
 
     // MARK: - Helpers
 
-    private func escapeCSV(_ string: String) -> String {
+    private nonisolated func escapeCSV(_ string: String) -> String {
         if string.contains(",") || string.contains("\"") || string.contains("\n") {
             let escaped = string.replacingOccurrences(of: "\"", with: "\"\"")
             return "\"\(escaped)\""

@@ -3,11 +3,13 @@
 Evaluate trained model on test set.
 
 Produces confusion matrix, per-class precision/recall/F1,
-and top-1/top-2 accuracy metrics.
+top-1/top-2/top-3/top-5 accuracy, macro/weighted F1, and saves
+all metrics to test_metrics.json.
 """
 
 import os
 import sys
+import json
 import argparse
 from collections import defaultdict
 
@@ -25,6 +27,13 @@ from ml.training.dataset import (
     get_val_transforms,
 )
 from ml.training.model import load_trained_model
+from ml.training.metrics import (
+    compute_metrics,
+    compute_top_k_accuracy,
+    build_confusion_matrix,
+    compute_macro_f1,
+    compute_weighted_f1,
+)
 
 ML_DIR = os.path.join(PROJECT_ROOT, "ml")
 DEFAULT_MODEL_PATH = os.path.join(ML_DIR, "models", "best_model.pth")
@@ -55,48 +64,6 @@ def evaluate(model, loader, device):
     return all_preds, all_labels, all_probs
 
 
-def compute_metrics(preds, labels, idx_to_class: dict[int, str], num_classes: int):
-    """Compute precision, recall, F1 per class."""
-    metrics = {}
-
-    for idx in range(num_classes):
-        class_name = idx_to_class[idx]
-        tp = sum(1 for p, l in zip(preds, labels) if p == idx and l == idx)
-        fp = sum(1 for p, l in zip(preds, labels) if p == idx and l != idx)
-        fn = sum(1 for p, l in zip(preds, labels) if p != idx and l == idx)
-
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
-
-        metrics[class_name] = {
-            "precision": precision,
-            "recall": recall,
-            "f1": f1,
-            "support": sum(1 for l in labels if l == idx),
-        }
-
-    return metrics
-
-
-def compute_top_k_accuracy(probs, labels, k=2):
-    """Compute top-k accuracy."""
-    correct = 0
-    for prob, label in zip(probs, labels):
-        top_k = prob.topk(k).indices.tolist()
-        if label in top_k:
-            correct += 1
-    return correct / len(labels)
-
-
-def build_confusion_matrix(preds, labels, num_classes: int):
-    """Build confusion matrix as 2D list."""
-    matrix = [[0] * num_classes for _ in range(num_classes)]
-    for pred, label in zip(preds, labels):
-        matrix[label][pred] += 1
-    return matrix
-
-
 def save_confusion_matrix(matrix, output_path, idx_to_class: dict[int, str], num_classes: int):
     """Save confusion matrix as image."""
     try:
@@ -108,7 +75,9 @@ def save_confusion_matrix(matrix, output_path, idx_to_class: dict[int, str], num
         class_names = [idx_to_class[i] for i in range(num_classes)]
         mat = np.array(matrix)
 
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig_w = max(12, num_classes * 0.3)
+        fig_h = max(10, num_classes * 0.25)
+        fig, ax = plt.subplots(figsize=(fig_w, fig_h))
         im = ax.imshow(mat, interpolation="nearest", cmap=plt.cm.Blues)
         ax.figure.colorbar(im, ax=ax)
 
@@ -122,15 +91,18 @@ def save_confusion_matrix(matrix, output_path, idx_to_class: dict[int, str], num
             title="Confusion Matrix",
         )
 
-        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+        tick_fontsize = 6 if num_classes > 25 else 10
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right", fontsize=tick_fontsize)
+        plt.setp(ax.get_yticklabels(), fontsize=tick_fontsize)
 
-        # Add text annotations
-        thresh = mat.max() / 2.0
-        for i in range(num_classes):
-            for j in range(num_classes):
-                ax.text(j, i, format(mat[i, j], "d"),
-                        ha="center", va="center",
-                        color="white" if mat[i, j] > thresh else "black")
+        # Add text annotations (skip for large class counts to avoid clutter)
+        if num_classes <= 25:
+            thresh = mat.max() / 2.0
+            for i in range(num_classes):
+                for j in range(num_classes):
+                    ax.text(j, i, format(mat[i, j], "d"),
+                            ha="center", va="center",
+                            color="white" if mat[i, j] > thresh else "black")
 
         plt.tight_layout()
         plt.savefig(output_path, dpi=150)
@@ -144,6 +116,41 @@ def save_confusion_matrix(matrix, output_path, idx_to_class: dict[int, str], num
         for i, row in enumerate(matrix):
             row_str = "  ".join(f"{v:>12d}" for v in row)
             print(f"{class_names[i]:>10}  {row_str}")
+
+
+def save_f1_bar_chart(per_class_metrics, output_path):
+    """Save horizontal bar chart of per-class F1 scores."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        names = list(per_class_metrics.keys())
+        f1_scores = [per_class_metrics[n]["f1"] for n in names]
+
+        # Sort by F1 ascending so worst classes are at bottom visually
+        sorted_pairs = sorted(zip(names, f1_scores), key=lambda x: x[1])
+        names = [p[0] for p in sorted_pairs]
+        f1_scores = [p[1] for p in sorted_pairs]
+
+        fig_h = max(4, len(names) * 0.35)
+        fig, ax = plt.subplots(figsize=(10, fig_h))
+        bars = ax.barh(names, f1_scores, color="steelblue")
+        ax.set_xlabel("F1 Score")
+        ax.set_title("Per-Class F1 Score")
+        ax.set_xlim(0, 1.0)
+
+        # Add value labels
+        for bar, score in zip(bars, f1_scores):
+            ax.text(bar.get_width() + 0.01, bar.get_y() + bar.get_height() / 2,
+                    f"{score:.3f}", va="center", fontsize=8)
+
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=150)
+        plt.close()
+        print(f"F1 bar chart saved to {output_path}")
+    except ImportError:
+        print("matplotlib not available, skipping F1 bar chart")
 
 
 def main():
@@ -203,14 +210,24 @@ def main():
     # Overall accuracy
     top1_acc = sum(1 for p, l in zip(preds, labels) if p == l) / len(labels)
     top2_acc = compute_top_k_accuracy(probs, labels, k=2)
+    top3_acc = compute_top_k_accuracy(probs, labels, k=min(3, num_classes))
+    top5_acc = compute_top_k_accuracy(probs, labels, k=min(5, num_classes))
 
     print(f"\n{'='*50}")
     print(f"Results:")
     print(f"  Top-1 Accuracy: {top1_acc:.4f} ({top1_acc*100:.1f}%)")
     print(f"  Top-2 Accuracy: {top2_acc:.4f} ({top2_acc*100:.1f}%)")
+    print(f"  Top-3 Accuracy: {top3_acc:.4f} ({top3_acc*100:.1f}%)")
+    print(f"  Top-5 Accuracy: {top5_acc:.4f} ({top5_acc*100:.1f}%)")
 
     # Per-class metrics
     metrics = compute_metrics(preds, labels, idx_to_class=idx_to_class, num_classes=num_classes)
+    macro_f1 = compute_macro_f1(metrics)
+    weighted_f1 = compute_weighted_f1(metrics)
+
+    print(f"\n  Macro F1:    {macro_f1:.4f}")
+    print(f"  Weighted F1: {weighted_f1:.4f}")
+
     print(f"\nPer-class metrics:")
     print(f"  {'Class':<15} {'Precision':<12} {'Recall':<12} {'F1':<12} {'Support':<10}")
     print(f"  {'-'*60}")
@@ -236,6 +253,24 @@ def main():
         idx_to_class=idx_to_class,
         num_classes=num_classes,
     )
+
+    # Save per-class F1 bar chart
+    save_f1_bar_chart(metrics, os.path.join(args.output_dir, "f1_per_class.png"))
+
+    # Save all metrics to JSON
+    metrics_json = {
+        "top1_accuracy": round(top1_acc, 4),
+        "top2_accuracy": round(top2_acc, 4),
+        "top3_accuracy": round(top3_acc, 4),
+        "top5_accuracy": round(top5_acc, 4),
+        "macro_f1": round(macro_f1, 4),
+        "weighted_f1": round(weighted_f1, 4),
+        "per_class": metrics,
+    }
+    metrics_path = os.path.join(args.output_dir, "test_metrics.json")
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        json.dump(metrics_json, f, indent=2)
+    print(f"\nMetrics saved to {metrics_path}")
 
     # Summary verdict
     print(f"\n{'='*50}")

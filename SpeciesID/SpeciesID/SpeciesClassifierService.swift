@@ -1,4 +1,4 @@
-import Vision
+@preconcurrency import Vision
 import CoreML
 import UIKit
 import Combine
@@ -16,6 +16,9 @@ struct SupportedSpeciesItem: Identifiable, Hashable {
     let displayName: String
     let scientificName: String
     let iconName: String
+    let category: String?
+    let referenceImageUrl: String?
+    let speciesDescription: String?
 }
 
 struct SpeciesDetection: Identifiable, Hashable {
@@ -55,6 +58,23 @@ struct ClassificationResult {
     }
 }
 
+// MARK: - Species Metadata (loaded from species_metadata.json)
+
+struct SpeciesMetadataFile: Codable {
+    let version: String
+    let species: [SpeciesMetadataEntry]
+}
+
+struct SpeciesMetadataEntry: Codable {
+    let id: String
+    let displayName: String
+    let scientificName: String
+    let iconName: String
+    let category: String?
+    let referenceImageUrl: String?
+    let description: String?
+}
+
 // MARK: - Species Classifier Service
 
 @MainActor
@@ -65,76 +85,7 @@ class SpeciesClassifierService: ObservableObject {
     @Published private(set) var supportedSpecies: [SupportedSpeciesItem] = []
 
     private var vnModel: VNCoreMLModel?
-
-    // This can be expanded without code changes elsewhere.
-    private let displayNames: [String: String] = [
-        "seahare": "California Seahare",
-        "brittlestar": "Brittle Star",
-        "sea_cucumber": "Sea Cucumber",
-        "bat_star": "Bat Star",
-        "ochre_sea_star": "Ochre Sea Star",
-        "purple_sea_urchin": "Purple Sea Urchin",
-        "red_sea_urchin": "Red Sea Urchin",
-        "giant_green_anemone": "Giant Green Anemone",
-        "aggregating_anemone": "Aggregating Anemone",
-        "california_mussel": "California Mussel",
-        "red_abalone": "Red Abalone",
-        "owl_limpet": "Owl Limpet",
-        "gooseneck_barnacle": "Gooseneck Barnacle",
-        "acorn_barnacle": "Acorn Barnacle",
-        "kelp_crab": "Kelp Crab",
-        "red_rock_crab": "Red Rock Crab",
-        "blueband_hermit_crab": "Blueband Hermit Crab",
-        "east_pacific_red_octopus": "East Pacific Red Octopus",
-        "sea_lemon_nudibranch": "Sea Lemon Nudibranch",
-        "spanish_shawl_nudibranch": "Spanish Shawl Nudibranch",
-    ]
-
-    private let scientificNames: [String: String] = [
-        "seahare": "Aplysia californica",
-        "brittlestar": "Ophiuroidea",
-        "sea_cucumber": "Holothuroidea",
-        "bat_star": "Patiria miniata",
-        "ochre_sea_star": "Pisaster ochraceus",
-        "purple_sea_urchin": "Strongylocentrotus purpuratus",
-        "red_sea_urchin": "Mesocentrotus franciscanus",
-        "giant_green_anemone": "Anthopleura xanthogrammica",
-        "aggregating_anemone": "Anthopleura elegantissima",
-        "california_mussel": "Mytilus californianus",
-        "red_abalone": "Haliotis rufescens",
-        "owl_limpet": "Lottia gigantea",
-        "gooseneck_barnacle": "Pollicipes polymerus",
-        "acorn_barnacle": "Balanus glandula",
-        "kelp_crab": "Pugettia producta",
-        "red_rock_crab": "Cancer productus",
-        "blueband_hermit_crab": "Pagurus samuelis",
-        "east_pacific_red_octopus": "Octopus rubescens",
-        "sea_lemon_nudibranch": "Doriopsilla albopunctata",
-        "spanish_shawl_nudibranch": "Flabellinopsis iodinea",
-    ]
-
-    private let iconNames: [String: String] = [
-        "seahare": "hare.fill",
-        "brittlestar": "sparkles",
-        "sea_cucumber": "capsule.fill",
-        "bat_star": "star.fill",
-        "ochre_sea_star": "star.circle.fill",
-        "purple_sea_urchin": "circle.hexagongrid.fill",
-        "red_sea_urchin": "circle.dashed",
-        "giant_green_anemone": "sun.max.fill",
-        "aggregating_anemone": "sun.max.circle.fill",
-        "california_mussel": "drop.fill",
-        "red_abalone": "oval.fill",
-        "owl_limpet": "oval.portrait.fill",
-        "gooseneck_barnacle": "circle.grid.cross.fill",
-        "acorn_barnacle": "circle.grid.2x2.fill",
-        "kelp_crab": "water.waves",
-        "red_rock_crab": "water.waves.and.arrow.up",
-        "blueband_hermit_crab": "snail.fill",
-        "east_pacific_red_octopus": "hands.sparkles.fill",
-        "sea_lemon_nudibranch": "leaf.fill",
-        "spanish_shawl_nudibranch": "flame.fill",
-    ]
+    private var speciesMetadata: [String: SpeciesMetadataEntry] = [:]
 
     private let minimumDetectionConfidence = 0.45
     private let minimumTopMargin = 0.05
@@ -143,7 +94,23 @@ class SpeciesClassifierService: ObservableObject {
     private let overlapThreshold = 0.30
 
     init() {
+        loadSpeciesMetadata()
         loadModel()
+    }
+
+    private func loadSpeciesMetadata() {
+        guard let url = Bundle.main.url(forResource: "species_metadata", withExtension: "json") else {
+            print("species_metadata.json not found in bundle")
+            return
+        }
+        do {
+            let data = try Data(contentsOf: url)
+            let file = try JSONDecoder().decode(SpeciesMetadataFile.self, from: data)
+            speciesMetadata = Dictionary(uniqueKeysWithValues: file.species.map { ($0.id, $0) })
+            print("Loaded species metadata v\(file.version) with \(file.species.count) species")
+        } catch {
+            print("Failed to load species metadata: \(error)")
+        }
     }
 
     private func loadModel() {
@@ -178,7 +145,7 @@ class SpeciesClassifierService: ObservableObject {
         errorMessage = nil
         defer { isClassifying = false }
 
-        let displayNames = self.displayNames
+        let metadata = self.speciesMetadata
         let minimumDetectionConfidence = self.minimumDetectionConfidence
         let minimumTopMargin = self.minimumTopMargin
         let fullFrameFallbackConfidence = self.fullFrameFallbackConfidence
@@ -195,7 +162,7 @@ class SpeciesClassifierService: ObservableObject {
                 if let fallbackDetection = Self.buildDetection(
                     from: fullFrameObservations,
                     boundingBox: fullFrame,
-                    displayNames: displayNames,
+                    metadata: metadata,
                     minimumConfidence: fullFrameFallbackConfidence,
                     minimumTopMargin: 0.0
                 ) {
@@ -219,7 +186,7 @@ class SpeciesClassifierService: ObservableObject {
                     if let detection = Self.buildDetection(
                         from: observations,
                         boundingBox: normalizedWindow,
-                        displayNames: displayNames,
+                        metadata: metadata,
                         minimumConfidence: minimumDetectionConfidence,
                         minimumTopMargin: minimumTopMargin
                     ) {
@@ -243,41 +210,49 @@ class SpeciesClassifierService: ObservableObject {
     }
 
     func scientificName(for speciesId: String) -> String {
-        scientificNames[speciesId] ?? speciesId
+        speciesMetadata[speciesId]?.scientificName ?? Self.prettifySpeciesName(speciesId)
     }
 
     private func buildSupportedSpecies(from model: MLModel) -> [SupportedSpeciesItem] {
         let labels = model.modelDescription.classLabels?.compactMap { $0 as? String } ?? []
-        let sourceLabels = labels.isEmpty ? Array(displayNames.keys).sorted() : labels
+        let sourceLabels = labels.isEmpty ? Array(speciesMetadata.keys).sorted() : labels
 
         return sourceLabels
             .map { speciesId in
-                SupportedSpeciesItem(
+                let entry = speciesMetadata[speciesId]
+                return SupportedSpeciesItem(
                     id: speciesId,
-                    displayName: displayNames[speciesId] ?? Self.prettifySpeciesName(speciesId),
-                    scientificName: scientificNames[speciesId] ?? Self.prettifySpeciesName(speciesId),
-                    iconName: iconNames[speciesId] ?? "fish.fill"
+                    displayName: entry?.displayName ?? Self.prettifySpeciesName(speciesId),
+                    scientificName: entry?.scientificName ?? Self.prettifySpeciesName(speciesId),
+                    iconName: entry?.iconName ?? "fish.fill",
+                    category: entry?.category,
+                    referenceImageUrl: entry?.referenceImageUrl,
+                    speciesDescription: entry?.description
                 )
             }
             .sorted { $0.displayName < $1.displayName }
     }
 
     private func fallbackSpeciesCatalog() -> [SupportedSpeciesItem] {
-        Array(displayNames.keys)
+        Array(speciesMetadata.keys)
             .sorted()
             .map { speciesId in
-                SupportedSpeciesItem(
+                let entry = speciesMetadata[speciesId]
+                return SupportedSpeciesItem(
                     id: speciesId,
-                    displayName: displayNames[speciesId] ?? Self.prettifySpeciesName(speciesId),
-                    scientificName: scientificNames[speciesId] ?? Self.prettifySpeciesName(speciesId),
-                    iconName: iconNames[speciesId] ?? "fish.fill"
+                    displayName: entry?.displayName ?? Self.prettifySpeciesName(speciesId),
+                    scientificName: entry?.scientificName ?? Self.prettifySpeciesName(speciesId),
+                    iconName: entry?.iconName ?? "fish.fill",
+                    category: entry?.category,
+                    referenceImageUrl: entry?.referenceImageUrl,
+                    speciesDescription: entry?.description
                 )
             }
     }
 
     // MARK: - Multi-Species Windows
 
-    private static func candidateWindows() -> [CGRect] {
+    private nonisolated static func candidateWindows() -> [CGRect] {
         var windows: [CGRect] = [CGRect(x: 0, y: 0, width: 1, height: 1)]
 
         // Coarse windows keep coverage high while reducing duplicate detections.
@@ -305,10 +280,10 @@ class SpeciesClassifierService: ObservableObject {
         return deduped
     }
 
-    private static func buildDetection(
+    private nonisolated static func buildDetection(
         from observations: [VNClassificationObservation],
         boundingBox: CGRect,
-        displayNames: [String: String],
+        metadata: [String: SpeciesMetadataEntry],
         minimumConfidence: Double,
         minimumTopMargin: Double
     ) -> SpeciesDetection? {
@@ -333,7 +308,7 @@ class SpeciesClassifierService: ObservableObject {
         let alternatives = observations.dropFirst().prefix(2).map {
             AlternativePrediction(
                 speciesId: $0.identifier,
-                displayName: displayNames[$0.identifier] ?? Self.prettifySpeciesName($0.identifier),
+                displayName: metadata[$0.identifier]?.displayName ?? Self.prettifySpeciesName($0.identifier),
                 confidence: min(max(Double($0.confidence), 0.0), 1.0)
             )
         }
@@ -341,14 +316,14 @@ class SpeciesClassifierService: ObservableObject {
         return SpeciesDetection(
             id: UUID(),
             speciesId: top.identifier,
-            displayName: displayNames[top.identifier] ?? Self.prettifySpeciesName(top.identifier),
+            displayName: metadata[top.identifier]?.displayName ?? Self.prettifySpeciesName(top.identifier),
             confidence: confidence,
             boundingBox: boundingBox,
             alternatives: alternatives
         )
     }
 
-    private static func gridWindows(gridSize: Int, overlap: CGFloat) -> [CGRect] {
+    private nonisolated static func gridWindows(gridSize: Int, overlap: CGFloat) -> [CGRect] {
         guard gridSize > 0 else { return [] }
 
         let step = 1.0 / CGFloat(gridSize)
@@ -368,7 +343,7 @@ class SpeciesClassifierService: ObservableObject {
         return windows
     }
 
-    private static func classifyCrop(_ cgImage: CGImage, using vnModel: VNCoreMLModel) -> [VNClassificationObservation] {
+    private nonisolated static func classifyCrop(_ cgImage: CGImage, using vnModel: VNCoreMLModel) -> [VNClassificationObservation] {
         let request = VNCoreMLRequest(model: vnModel)
         request.imageCropAndScaleOption = .centerCrop
 
@@ -381,7 +356,7 @@ class SpeciesClassifierService: ObservableObject {
         }
     }
 
-    private static func pixelRect(normalized: CGRect, imageWidth: Int, imageHeight: Int) -> CGRect {
+    private nonisolated static func pixelRect(normalized: CGRect, imageWidth: Int, imageHeight: Int) -> CGRect {
         let x = clamp(normalized.origin.x, min: 0.0, max: 1.0)
         let y = clamp(normalized.origin.y, min: 0.0, max: 1.0)
         let w = clamp(normalized.size.width, min: 0.05, max: 1.0)
@@ -398,7 +373,7 @@ class SpeciesClassifierService: ObservableObject {
         return CGRect(x: clampedX, y: clampedY, width: pw, height: ph).integral
     }
 
-    private static func mergeDetections(
+    private nonisolated static func mergeDetections(
         _ detections: [SpeciesDetection],
         iouThreshold: CGFloat,
         maxDetections: Int
@@ -427,7 +402,7 @@ class SpeciesClassifierService: ObservableObject {
         return selected
     }
 
-    private static func iou(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+    private nonisolated static func iou(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
         let intersection = lhs.intersection(rhs)
         if intersection.isNull || intersection.isEmpty {
             return 0
@@ -440,7 +415,7 @@ class SpeciesClassifierService: ObservableObject {
         return intersectionArea / unionArea
     }
 
-    private static func prettifySpeciesName(_ id: String) -> String {
+    private nonisolated static func prettifySpeciesName(_ id: String) -> String {
         id
             .replacingOccurrences(of: "_", with: " ")
             .split(separator: " ")
@@ -448,7 +423,7 @@ class SpeciesClassifierService: ObservableObject {
             .joined(separator: " ")
     }
 
-    private static func clamp(_ value: CGFloat, min minValue: CGFloat, max maxValue: CGFloat) -> CGFloat {
+    private nonisolated static func clamp(_ value: CGFloat, min minValue: CGFloat, max maxValue: CGFloat) -> CGFloat {
         Swift.max(minValue, Swift.min(value, maxValue))
     }
 }
