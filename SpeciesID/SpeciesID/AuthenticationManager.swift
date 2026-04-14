@@ -3,6 +3,9 @@ import Foundation
 import FirebaseCore
 import FirebaseAuth
 import FirebaseFirestore
+import GoogleSignIn
+import AuthenticationServices
+import CryptoKit
 
 struct AppUser {
     let uid: String
