@@ -87,11 +87,13 @@ class SpeciesClassifierService: ObservableObject {
     private var vnModel: VNCoreMLModel?
     private var speciesMetadata: [String: SpeciesMetadataEntry] = [:]
 
-    private let minimumDetectionConfidence = 0.45
-    private let minimumTopMargin = 0.05
-    private let fullFrameFallbackConfidence = 0.30
+    private let minimumDetectionConfidence = 0.55
+    private let minimumTopMargin = 0.10
+    private let fullFrameFallbackConfidence = 0.50
     private let maxDetections = 3
     private let overlapThreshold = 0.30
+    /// Maximum entropy ratio (actual/uniform) above which we reject as "unknown"
+    private let maxEntropyRatio = 0.65
 
     init() {
         loadSpeciesMetadata()
@@ -151,6 +153,7 @@ class SpeciesClassifierService: ObservableObject {
         let fullFrameFallbackConfidence = self.fullFrameFallbackConfidence
         let maxDetections = self.maxDetections
         let overlapThreshold = self.overlapThreshold
+        let maxEntropyRatio = self.maxEntropyRatio
 
         let result: ClassificationResult? = await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
@@ -164,7 +167,8 @@ class SpeciesClassifierService: ObservableObject {
                     boundingBox: fullFrame,
                     metadata: metadata,
                     minimumConfidence: fullFrameFallbackConfidence,
-                    minimumTopMargin: 0.0
+                    minimumTopMargin: minimumTopMargin,
+                    maxEntropyRatio: maxEntropyRatio
                 ) {
                     detections.append(fallbackDetection)
                 }
@@ -188,7 +192,8 @@ class SpeciesClassifierService: ObservableObject {
                         boundingBox: normalizedWindow,
                         metadata: metadata,
                         minimumConfidence: minimumDetectionConfidence,
-                        minimumTopMargin: minimumTopMargin
+                        minimumTopMargin: minimumTopMargin,
+                        maxEntropyRatio: maxEntropyRatio
                     ) {
                         detections.append(detection)
                     }
@@ -285,7 +290,8 @@ class SpeciesClassifierService: ObservableObject {
         boundingBox: CGRect,
         metadata: [String: SpeciesMetadataEntry],
         minimumConfidence: Double,
-        minimumTopMargin: Double
+        minimumTopMargin: Double,
+        maxEntropyRatio: Double = 0.75
     ) -> SpeciesDetection? {
         guard let top = observations.first else {
             return nil
@@ -303,6 +309,19 @@ class SpeciesClassifierService: ObservableObject {
         let margin = confidence - secondConfidence
         guard margin >= minimumTopMargin else {
             return nil
+        }
+
+        // Entropy check: if probabilities are spread too evenly, the model doesn't know
+        let numClasses = Double(observations.count)
+        if numClasses > 1 {
+            let entropy = observations.reduce(0.0) { sum, obs in
+                let p = max(Double(obs.confidence), 1e-10)
+                return sum - p * log(p)
+            }
+            let maxEntropy = log(numClasses)
+            if maxEntropy > 0 && (entropy / maxEntropy) > maxEntropyRatio {
+                return nil
+            }
         }
 
         let alternatives = observations.dropFirst().prefix(2).map {

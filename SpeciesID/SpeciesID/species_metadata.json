@@ -1,5 +1,5 @@
 {
-  "version": "2.1",
+  "version": "2.0",
   "species": [
     {
       "id": "seahare",
@@ -7,8 +7,7 @@
       "scientificName": "Aplysia californica",
       "iconName": "hare.fill",
       "category": "Mollusks",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/27139713/medium.jpeg",
-      "description": "A large sea slug found in kelp beds along the California coast. Can grow up to 75 cm and releases purple ink when disturbed."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/27139713/medium.jpeg"
     },
     {
       "id": "sea_cucumber",
@@ -16,8 +15,7 @@
       "scientificName": "Holothuroidea",
       "iconName": "capsule.fill",
       "category": "Echinoderms",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/47789199/medium.jpg",
-      "description": "Soft-bodied echinoderms found on the ocean floor. They play an important role in recycling nutrients in marine ecosystems."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/47789199/medium.jpg"
     },
     {
       "id": "brittlestar",
@@ -25,8 +23,7 @@
       "scientificName": "Ophiuroidea",
       "iconName": "sparkles",
       "category": "Echinoderms",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/108603901/medium.jpg",
-      "description": "Related to sea stars but with long, thin, flexible arms. Often found hiding under rocks in tidepools."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/108603901/medium.jpg"
     },
     {
       "id": "bat_star",
@@ -34,8 +31,7 @@
       "scientificName": "Patiria miniata",
       "iconName": "star.fill",
       "category": "Echinoderms",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/127624366/medium.jpeg",
-      "description": "A colorful sea star with webbed arms resembling bat wings. Found in a variety of colors including orange, red, and purple."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/127624366/medium.jpeg"
     },
     {
       "id": "ochre_sea_star",
@@ -43,8 +39,7 @@
       "scientificName": "Pisaster ochraceus",
       "iconName": "star.circle.fill",
       "category": "Echinoderms",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/248324436/medium.jpg",
-      "description": "A keystone predator of the Pacific coast. Found in purple, orange, and brown. Feeds primarily on mussels."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/248324436/medium.jpg"
     },
     {
       "id": "purple_sea_urchin",
@@ -52,8 +47,7 @@
       "scientificName": "Strongylocentrotus purpuratus",
       "iconName": "circle.hexagongrid.fill",
       "category": "Echinoderms",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/338665145/medium.jpeg",
-      "description": "A small, spiny echinoderm that grazes on kelp. Overgrazing by purple urchins can create barren zones on rocky reefs."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/338665145/medium.jpeg"
     },
     {
       "id": "red_sea_urchin",
@@ -61,8 +55,7 @@
       "scientificName": "Mesocentrotus franciscanus",
       "iconName": "circle.dashed",
       "category": "Echinoderms",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/484400937/medium.jpeg",
-      "description": "The largest sea urchin in the world, reaching up to 18 cm. Commercially harvested for its roe (uni)."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/484400937/medium.jpeg"
     },
     {
       "id": "giant_green_anemone",
@@ -70,8 +63,7 @@
       "scientificName": "Anthopleura xanthogrammica",
       "iconName": "sun.max.fill",
       "category": "Cnidarians",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/3863/medium.jpg",
-      "description": "A large, bright green anemone found in tidepools. Its green color comes from symbiotic algae living in its tissues."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/3863/medium.jpg"
     },
     {
       "id": "aggregating_anemone",
@@ -79,8 +71,7 @@
       "scientificName": "Anthopleura elegantissima",
       "iconName": "sun.max.circle.fill",
       "category": "Cnidarians",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/83191277/medium.jpg",
-      "description": "Small anemones that clone themselves to form dense colonies. Different colonies will fight each other for territory."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/83191277/medium.jpg"
     },
     {
       "id": "california_mussel",
@@ -88,8 +79,7 @@
       "scientificName": "Mytilus californianus",
       "iconName": "drop.fill",
       "category": "Mollusks",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/18322/medium.jpg",
-      "description": "Forms dense beds on rocky intertidal zones. A key foundation species providing habitat for many other organisms."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/18322/medium.jpg"
     },
     {
       "id": "red_abalone",
@@ -97,8 +87,7 @@
       "scientificName": "Haliotis rufescens",
       "iconName": "oval.fill",
       "category": "Mollusks",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/3647914/medium.JPG",
-      "description": "The largest abalone species in the world. Listed as critically endangered due to overharvesting and disease."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/3647914/medium.JPG"
     },
     {
       "id": "owl_limpet",
@@ -106,8 +95,7 @@
       "scientificName": "Lottia gigantea",
       "iconName": "oval.portrait.fill",
       "category": "Mollusks",
-      "referenceImageUrl": "https://static.inaturalist.org/photos/29487487/medium.jpeg",
-      "description": "A large territorial limpet that farms algae on its home scar. Can live for over 15 years."
+      "referenceImageUrl": "https://static.inaturalist.org/photos/29487487/medium.jpeg"
     },
     {
       "id": "gooseneck_barnacle",
@@ -115,8 +103,7 @@
       "scientificName": "Pollicipes polymerus",
       "iconName": "circle.grid.cross.fill",
       "category": "Crustaceans",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/81268996/medium.jpeg",
-      "description": "Stalked barnacles found in clusters on wave-exposed rocks. Considered a delicacy in some cuisines."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/81268996/medium.jpeg"
     },
     {
       "id": "acorn_barnacle",
@@ -124,8 +111,7 @@
       "scientificName": "Balanus glandula",
       "iconName": "circle.grid.2x2.fill",
       "category": "Crustaceans",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/339584012/medium.jpeg",
-      "description": "Small, cone-shaped barnacles that form white bands on rocky shores. One of the most common intertidal organisms."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/339584012/medium.jpeg"
     },
     {
       "id": "kelp_crab",
@@ -133,8 +119,7 @@
       "scientificName": "Pugettia producta",
       "iconName": "water.waves",
       "category": "Crustaceans",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/109877730/medium.jpg",
-      "description": "A spider crab commonly found in kelp forests. Changes color from green to red depending on diet."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/109877730/medium.jpg"
     },
     {
       "id": "red_rock_crab",
@@ -142,8 +127,7 @@
       "scientificName": "Cancer productus",
       "iconName": "water.waves.and.arrow.up",
       "category": "Crustaceans",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/100280808/medium.jpeg",
-      "description": "A large, heavy-bodied crab found along the Pacific coast. Identified by its brick-red color and black-tipped claws."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/100280808/medium.jpeg"
     },
     {
       "id": "blueband_hermit_crab",
@@ -151,8 +135,7 @@
       "scientificName": "Pagurus samuelis",
       "iconName": "snail.fill",
       "category": "Crustaceans",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/500996984/medium.jpg",
-      "description": "A small hermit crab identified by bright blue bands on its walking legs. Very common in California tidepools."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/500996984/medium.jpg"
     },
     {
       "id": "east_pacific_red_octopus",
@@ -160,8 +143,7 @@
       "scientificName": "Octopus rubescens",
       "iconName": "hands.sparkles.fill",
       "category": "Cephalopods",
-      "referenceImageUrl": "https://static.inaturalist.org/photos/8851952/medium.jpg",
-      "description": "A small, reddish octopus found in rocky reefs and tidepools. Highly intelligent with excellent camouflage abilities."
+      "referenceImageUrl": "https://static.inaturalist.org/photos/8851952/medium.jpg"
     },
     {
       "id": "sea_lemon_nudibranch",
@@ -169,8 +151,7 @@
       "scientificName": "Doriopsilla albopunctata",
       "iconName": "leaf.fill",
       "category": "Mollusks",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/2324626/medium.jpg",
-      "description": "A yellow nudibranch with white spots. Feeds on sponges and is commonly found in rocky intertidal areas."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/2324626/medium.jpg"
     },
     {
       "id": "spanish_shawl_nudibranch",
@@ -178,8 +159,329 @@
       "scientificName": "Flabellinopsis iodinea",
       "iconName": "flame.fill",
       "category": "Mollusks",
-      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/6075229/medium.jpg",
-      "description": "A strikingly colorful nudibranch with a purple body and orange cerata. One of the most photographed sea slugs on the Pacific coast."
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/6075229/medium.jpg"
+    },
+    {
+      "id": "sunflower_sea_star",
+      "displayName": "Sunflower Sea Star",
+      "scientificName": "Pycnopodia helianthoides",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/241416331/medium.png"
+    },
+    {
+      "id": "leather_star",
+      "displayName": "Leather Star",
+      "scientificName": "Dermasterias imbricata",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/4008104/medium.jpg"
+    },
+    {
+      "id": "blood_star",
+      "displayName": "Blood Star",
+      "scientificName": "Henricia leviuscula",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/13318193/medium.jpeg"
+    },
+    {
+      "id": "sand_dollar",
+      "displayName": "Sand Dollar",
+      "scientificName": "Dendraster excentricus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://static.inaturalist.org/photos/89187926/medium.jpg"
+    },
+    {
+      "id": "giant_spined_sea_star",
+      "displayName": "Giant Spined Sea Star",
+      "scientificName": "Pisaster giganteus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/2351050/medium.jpg"
+    },
+    {
+      "id": "black_turban_snail",
+      "displayName": "Black Turban Snail",
+      "scientificName": "Tegula funebralis",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/326794442/medium.png"
+    },
+    {
+      "id": "wavy_turban_snail",
+      "displayName": "Wavy Turban Snail",
+      "scientificName": "Megastraea undosa",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/359908282/medium.jpg"
+    },
+    {
+      "id": "giant_keyhole_limpet",
+      "displayName": "Giant Keyhole Limpet",
+      "scientificName": "Megathura crenulata",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/2126/medium.jpg"
+    },
+    {
+      "id": "lined_chiton",
+      "displayName": "Lined Chiton",
+      "scientificName": "Tonicella lineata",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/222229540/medium.jpg"
+    },
+    {
+      "id": "gumboot_chiton",
+      "displayName": "Gumboot Chiton",
+      "scientificName": "Cryptochiton stelleri",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/582439518/medium.jpg"
+    },
+    {
+      "id": "norris_topsnail",
+      "displayName": "Norris Topsnail",
+      "scientificName": "Norrisia norrisii",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://static.inaturalist.org/photos/2750119/medium.jpg"
+    },
+    {
+      "id": "california_cone_snail",
+      "displayName": "California Cone Snail",
+      "scientificName": "Californiconus californicus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/19706953/medium.jpeg"
+    },
+    {
+      "id": "two_spot_octopus",
+      "displayName": "Two Spot Octopus",
+      "scientificName": "Octopus bimaculoides",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/589996599/medium.jpg"
+    },
+    {
+      "id": "striped_shore_crab",
+      "displayName": "Striped Shore Crab",
+      "scientificName": "Pachygrapsus crassipes",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/66333024/medium.jpg"
+    },
+    {
+      "id": "purple_shore_crab",
+      "displayName": "Purple Shore Crab",
+      "scientificName": "Hemigrapsus nudus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/1732/medium.jpg"
+    },
+    {
+      "id": "california_spiny_lobster",
+      "displayName": "California Spiny Lobster",
+      "scientificName": "Panulirus interruptus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/107696794/medium.jpeg"
+    },
+    {
+      "id": "porcelain_crab",
+      "displayName": "Porcelain Crab",
+      "scientificName": "Petrolisthes cinctipes",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://static.inaturalist.org/photos/1390549/medium.JPG"
+    },
+    {
+      "id": "decorator_crab",
+      "displayName": "Decorator Crab",
+      "scientificName": "Loxorhynchus crispatus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/1810554/medium.jpg"
+    },
+    {
+      "id": "strawberry_anemone",
+      "displayName": "Strawberry Anemone",
+      "scientificName": "Corynactis californica",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/10234471/medium.jpeg"
+    },
+    {
+      "id": "sunburst_anemone",
+      "displayName": "Sunburst Anemone",
+      "scientificName": "Anthopleura sola",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/10551/medium.jpg"
+    },
+    {
+      "id": "moonglow_anemone",
+      "displayName": "Moonglow Anemone",
+      "scientificName": "Anthopleura artemisia",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/79892958/medium.jpeg"
+    },
+    {
+      "id": "moon_jelly",
+      "displayName": "Moon Jelly",
+      "scientificName": "Aurelia aurita",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://static.inaturalist.org/photos/128613708/medium.jpg"
+    },
+    {
+      "id": "purple_striped_jelly",
+      "displayName": "Purple Striped Jelly",
+      "scientificName": "Chrysaora colorata",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/24495648/medium.jpg"
+    },
+    {
+      "id": "by_the_wind_sailor",
+      "displayName": "By The Wind Sailor",
+      "scientificName": "Velella velella",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/179473940/medium.jpg"
+    },
+    {
+      "id": "garibaldi",
+      "displayName": "Garibaldi",
+      "scientificName": "Hypsypops rubicundus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://static.inaturalist.org/photos/410429697/medium.jpg"
+    },
+    {
+      "id": "california_sheephead",
+      "displayName": "California Sheephead",
+      "scientificName": "Bodianus pulcher",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/106228676/medium.jpg"
+    },
+    {
+      "id": "tidepool_sculpin",
+      "displayName": "Tidepool Sculpin",
+      "scientificName": "Oligocottus maculosus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/240955373/medium.jpeg"
+    },
+    {
+      "id": "opaleye",
+      "displayName": "Opaleye",
+      "scientificName": "Girella nigricans",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/9430036/medium.jpg"
+    },
+    {
+      "id": "senoritas",
+      "displayName": "Senoritas",
+      "scientificName": "Halichoeres californicus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/7436934/medium.jpeg"
+    },
+    {
+      "id": "giant_kelp",
+      "displayName": "Giant Kelp",
+      "scientificName": "Macrocystis pyrifera",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://static.inaturalist.org/photos/187358921/medium.jpg"
+    },
+    {
+      "id": "feather_boa_kelp",
+      "displayName": "Feather Boa Kelp",
+      "scientificName": "Egregia menziesii",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/55064789/medium.jpg"
+    },
+    {
+      "id": "sea_lettuce",
+      "displayName": "Sea Lettuce",
+      "scientificName": "Ulva lactuca",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/412792345/medium.jpg"
+    },
+    {
+      "id": "coralline_algae",
+      "displayName": "Coralline Algae",
+      "scientificName": "Corallinales",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/21256906/medium.jpeg"
+    },
+    {
+      "id": "surfgrass",
+      "displayName": "Surfgrass",
+      "scientificName": "Phyllospadix",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/83987/medium.JPG"
+    },
+    {
+      "id": "sea_palm",
+      "displayName": "Sea Palm",
+      "scientificName": "Postelsia palmiformis",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/11250501/medium.jpg"
+    },
+    {
+      "id": "pacific_harbor_seal",
+      "displayName": "Pacific Harbor Seal",
+      "scientificName": "Phoca vitulina",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/190781322/medium.jpg"
+    },
+    {
+      "id": "california_sea_lion",
+      "displayName": "California Sea Lion",
+      "scientificName": "Zalophus californianus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://static.inaturalist.org/photos/11888923/medium.png"
+    },
+    {
+      "id": "sea_otter",
+      "displayName": "Sea Otter",
+      "scientificName": "Enhydra lutris",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/311432614/medium.jpg"
+    },
+    {
+      "id": "turban_snail",
+      "displayName": "Turban Snail",
+      "scientificName": "Tegula",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/17603616/medium.jpg"
+    },
+    {
+      "id": "opalescent_nudibranch",
+      "displayName": "Opalescent Nudibranch",
+      "scientificName": "Hermissenda opalescens",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://static.inaturalist.org/photos/2401372/medium.JPG"
+    },
+    {
+      "id": "hopkins_rose_nudibranch",
+      "displayName": "Hopkins Rose Nudibranch",
+      "scientificName": "Ceratodoris rosacea",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/58804/medium.jpg"
+    },
+    {
+      "id": "navanax",
+      "displayName": "Navanax",
+      "scientificName": "Navanax inermis",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/6075187/medium.jpg"
+    },
+    {
+      "id": "giant_pacific_octopus",
+      "displayName": "Giant Pacific Octopus",
+      "scientificName": "Enteroctopus dofleini",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/174792488/medium.jpg"
+    },
+    {
+      "id": "rock_scallop",
+      "displayName": "Rock Scallop",
+      "scientificName": "Crassadoma gigantea",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/2816081/medium.jpg"
+    },
+    {
+      "id": "bay_mussel",
+      "displayName": "Bay Mussel",
+      "scientificName": "Mytilus trossulus",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/23665/medium.jpg"
+    },
+    {
+      "id": "lewis_moon_snail",
+      "displayName": "Lewis Moon Snail",
+      "scientificName": "Neverita lewisii",
+      "iconName": "fish.fill",
+      "referenceImageUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/254156033/medium.jpeg"
     }
   ]
 }
