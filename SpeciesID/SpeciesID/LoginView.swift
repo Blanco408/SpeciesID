@@ -132,8 +132,7 @@ struct LoginView: View {
     }
 
     private func handleGoogleSignIn() {
-        // Deferred to a later sprint
-        print("Gmail Sign In tapped (deferred)")
+        Task { await authManager.signInWithGoogle() }
     }
 
     private func handleAppleSignIn() {

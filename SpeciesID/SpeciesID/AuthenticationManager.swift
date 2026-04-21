@@ -14,7 +14,7 @@ struct AppUser {
 }
 
 @MainActor
-final class AuthenticationManager: ObservableObject {
+final class AuthenticationManager: NSObject, ObservableObject {
     @Published var currentUser: AppUser?
     @Published var isAuthenticated: Bool = false
     @Published var authError: String?
@@ -22,6 +22,7 @@ final class AuthenticationManager: ObservableObject {
 
     private var authStateHandle: AuthStateDidChangeListenerHandle?
     private var didSetup = false
+    private var currentNonce = String?
 
     // No Firebase calls in init — Firebase isn't configured yet.
     // Call setup() after FirebaseApp.configure() has run (from .onAppear).
@@ -114,6 +115,7 @@ final class AuthenticationManager: ObservableObject {
         }
 
         do {
+            GIDSignIn.sharedInstance.signOut() 
             try Auth.auth().signOut()
             currentUser = nil
             isAuthenticated = false
@@ -131,6 +133,68 @@ final class AuthenticationManager: ObservableObject {
         currentUser = nil
     }
 
+    // MARK: - Google Sign In
+
+    func signInWithGoogle() async {
+        guard FirebaseApp.app() != nil else {
+            authError = "Firebase is not configured."
+            return
+        }
+        guard let clientID = FirebaseApp.app()?.options.clientID else {
+            authError = "Missing Google client ID."
+            return
+        }
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
+            authError = "Unable to find root view controller."
+            return
+        }
+
+        isLoading = true
+        authError = nil
+
+        do {
+            let config = GIDConfiguration(clientID: clientID)
+            GIDSignIn.sharedInstance.configuration = config
+
+            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)
+            guard let idToken = result.user.idToken?.tokenString else {
+                authError = "Failed to get Google ID token."
+                isLoading = false
+                return
+            }
+
+            let credential = GoogleAuthProvider.credential(
+                withIDToken: idToken,
+                accessToken: result.user.accessToken.tokenString
+            )
+
+            let authResult = try await Auth.auth().signIn(with: credential)
+            let uid = authResult.user.uid
+            let email = authResult.user.email ?? ""
+            let displayName = authResult.user.displayName ?? email.components(separatedBy: "@").first ?? "User"
+
+            let db = Firestore.firestore()
+            let doc = try? await db.collection("users").document(uid).getDocument()
+            if doc?.exists == true {
+                try? await updateLastLogin(userId: uid)
+            } else {
+                try? await createUserDocument(userId: uid, email: email, displayName: displayName)
+            }
+
+            await fetchUserProfile(userId: uid, email: email)
+        } catch {
+            if (error as NSError).code == GIDSignInError.canceled.rawValue {
+                authError = nil
+            } else {
+                authError = "Google sign-in failed. Please try again."
+            }
+        }
+
+        isLoading = false
+    }
+    
+    
     // MARK: - Firestore Helpers
 
     private func fetchUserProfile(userId: String, email: String?) async {
