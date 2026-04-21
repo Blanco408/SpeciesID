@@ -68,7 +68,7 @@ struct CameraView: View {
                     liveLabel = result.displayName
                     liveConfidence = result.confidence
                 } else {
-                    liveLabel = ""
+                    liveLabel = "No species detected"
                     liveConfidence = 0
                 }
             }
@@ -102,21 +102,26 @@ struct CameraView: View {
             if !liveLabel.isEmpty {
                 VStack {
                     HStack(spacing: 8) {
-                        Image(systemName: "sparkle.magnifyingglass")
+                        let isUnknown = liveConfidence == 0
+
+                        Image(systemName: isUnknown ? "questionmark.circle" : "sparkle.magnifyingglass")
                             .font(.caption.weight(.semibold))
                         Text(liveLabel)
                             .font(.subheadline.weight(.semibold))
-                        Text("\(Int(liveConfidence * 100))%")
-                            .font(.caption.weight(.medium))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.white.opacity(0.25))
-                            .cornerRadius(4)
+
+                        if !isUnknown {
+                            Text("\(Int(liveConfidence * 100))%")
+                                .font(.caption.weight(.medium))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.white.opacity(0.25))
+                                .cornerRadius(4)
+                        }
                     }
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(AppColors.darkGreen.opacity(0.85))
+                    .background((liveConfidence == 0 ? Color(.systemGray) : AppColors.darkGreen).opacity(0.85))
                     .cornerRadius(24)
                     .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
 
@@ -251,6 +256,25 @@ struct CameraView: View {
                         result: result,
                         scientificNameLookup: classifier.scientificName(for:)
                     )
+                    .padding(.horizontal)
+                } else if !classifier.isClassifying && selectedImage != nil {
+                    // No species recognized
+                    VStack(spacing: 8) {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 32))
+                            .foregroundColor(.secondary)
+                        Text("Species Not Recognized")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Text("Try getting closer or capturing from a different angle.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
                     .padding(.horizontal)
                 } else if let error = classifier.errorMessage {
                     HStack {
