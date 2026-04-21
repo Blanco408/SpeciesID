@@ -22,11 +22,11 @@ final class AuthenticationManager: NSObject, ObservableObject {
 
     private var authStateHandle: AuthStateDidChangeListenerHandle?
     private var didSetup = false
-    private var currentNonce = String?
+    private var currentNonce: String?
 
     // No Firebase calls in init — Firebase isn't configured yet.
     // Call setup() after FirebaseApp.configure() has run (from .onAppear).
-    init() {}
+    override init() {}
 
     func setup() {
         guard !didSetup, FirebaseApp.app() != nil else { return }
