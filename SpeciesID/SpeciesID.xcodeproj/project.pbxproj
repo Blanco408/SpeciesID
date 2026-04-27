@@ -18,9 +18,22 @@
 		86066BD42EE4D54200CBADDC /* SpeciesID.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SpeciesID.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DA7578992F9FBFD400ACDF27 /* Exceptions for "SpeciesID" folder in "SpeciesID" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 86066BD32EE4D54200CBADDC /* SpeciesID */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		86066BD62EE4D54200CBADDC /* SpeciesID */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DA7578992F9FBFD400ACDF27 /* Exceptions for "SpeciesID" folder in "SpeciesID" target */,
+			);
 			path = SpeciesID;
 			sourceTree = "<group>";
 		};
@@ -279,6 +292,7 @@
 				DEVELOPMENT_TEAM = T49QW6A9PF;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SpeciesID/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "SpeciesID needs camera access to photograph species for identification.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "SpeciesID uses your location to record where species observations were made.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -313,6 +327,7 @@
 				DEVELOPMENT_TEAM = T49QW6A9PF;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SpeciesID/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "SpeciesID needs camera access to photograph species for identification.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "SpeciesID uses your location to record where species observations were made.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

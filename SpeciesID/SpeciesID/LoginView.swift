@@ -7,30 +7,29 @@ struct LoginView: View {
     @State private var showEmailLogin: Bool = false
     @State private var isSignUpMode: Bool = false
     @State private var showErrorAlert: Bool = false
-
+    
     private let darkGreen = Color(red: 0.0, green: 0.5, blue: 0.2)
     private let lightGreen = Color(red: 0.4, green: 0.7, blue: 0.4)
-    private let buttonGray = Color(red: 0.95, green: 0.95, blue: 0.95)
-
+    
     var body: some View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
-
+            
             VStack(spacing: 10) {
                 Spacer()
-
+                
                 VStack(spacing: 16) {
                     ZStack {
                         Image(systemName: "camera.fill")
                             .font(.system(size: 50))
                             .foregroundColor(lightGreen)
-
+                        
                         Image(systemName: "leaf.fill")
                             .font(.system(size: 20))
                             .foregroundColor(lightGreen)
                             .offset(x: 18, y: -18)
                     }
-
+                    
                     VStack(spacing: 4) {
                         Text("EcoSnap")
                             .font(.system(size: 42, weight: .bold))
@@ -40,9 +39,9 @@ struct LoginView: View {
                             .foregroundColor(lightGreen)
                     }
                 }
-
+                
                 Spacer()
-
+                
                 VStack(spacing: 8) {
                     Text("Welcome")
                         .font(.system(size: 36, weight: .bold))
@@ -52,16 +51,16 @@ struct LoginView: View {
                         .foregroundColor(lightGreen)
                 }
                 .padding(.bottom, 30)
-
+                
                 VStack(spacing: 12) {
-                    loginButton("Gmail Login", action: handleGoogleSignIn)
-                    loginButton("Apple Login", action: handleAppleSignIn)
-                    loginButton("Default Login", action: { showEmailLogin = true })
-                    guestLoginButton()
+                    googleSignInButton
+                    appleSignInButton
+                    emailSignInButton
+                    guestSignInButton
                 }
                 .padding(.horizontal, 32)
                 .padding(.bottom, 20)
-
+                
                 Text("By pressing on \"Continue with...\" you agree to our **Terms of Service** and **Privacy Policy**")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
@@ -69,7 +68,7 @@ struct LoginView: View {
                     .padding(.horizontal, 32)
                     .padding(.bottom, 40)
             }
-
+            
             if authManager.isLoading {
                 Color.black.opacity(0.3).ignoresSafeArea()
                 ProgressView().scaleEffect(1.2).tint(.white)
@@ -100,46 +99,85 @@ struct LoginView: View {
             }
         }
     }
-
-    private func loginButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(buttonGray)
-                .cornerRadius(12)
+    
+    private var googleSignInButton: some View {
+        Button(action: { Task { await authManager.signInWithGoogle() } }) {
+            HStack(spacing: 10) {
+                Image("googleLogo")
+                    .resizable()
+                    .frame(width: 22, height: 22)
+                Text("Continue with Google")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color(.label))
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(.systemGray4), lineWidth: 1)
+            )
+        }
+        .disabled(authManager.isLoading)
+    }
+    
+    private var appleSignInButton: some View {
+        Button(action: { authManager.signInWithApple() }) {
+            HStack(spacing: 10) {
+                Image(systemName: "apple.logo")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.white)
+                Text("Continue with Apple")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(Color.black)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(.systemGray4), lineWidth: 1)
+            )
         }
         .disabled(authManager.isLoading)
     }
 
-    private func guestLoginButton() -> some View {
-        Button(action: handleGuestSignIn) {
-            Text("Sign in as Guest")
-                .font(.system(size: 16, weight: .medium))
+    private var emailSignInButton: some View {
+        Button(action: { showEmailLogin = true }) {
+            HStack(spacing: 10) {
+                Image(systemName: "envelope.fill")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                Text("Continue with Email")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(Color(.systemGray2))
+            .cornerRadius(12)
+        }
+        .disabled(authManager.isLoading)
+    }
+    
+    private var guestSignInButton: some View {
+        Button(action: { authManager.signInAsGuest() }) {
+            Text("Continue as Guest")
+                .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                )
-                .contentShape(Rectangle())
+                .frame(height: 44)
         }
         .disabled(authManager.isLoading)
     }
-
-    private func handleGoogleSignIn() {
-        Task { await authManager.signInWithGoogle() }
-    }
-
+    
     private func handleAppleSignIn() {
         // Deferred to a later sprint
-        print("Apple Sign In tapped (deferred)")
+        authManager.signInWithApple()
     }
-
+    
     private func handleEmailSubmit() {
         Task {
             if isSignUpMode {
@@ -155,13 +193,12 @@ struct LoginView: View {
             }
         }
     }
-
-    private func handleGuestSignIn() {
-        authManager.signInAsGuest()
+    
+    
+struct LoginView_Previews: PreviewProvider {
+    static var previews: some View {
+        LoginView()
+            .environmentObject(AuthenticationManager())
     }
 }
-
-#Preview {
-    LoginView()
-        .environmentObject(AuthenticationManager())
 }

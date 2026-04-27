@@ -81,7 +81,7 @@ final class AuthenticationManager: NSObject, ObservableObject {
         isLoading = false
     }
 
-    // MARK: - Sign Up
+    // MARK: - Email Sign Up
 
     func signUp(email: String, password: String) async {
         guard FirebaseApp.app() != nil else {
@@ -194,6 +194,39 @@ final class AuthenticationManager: NSObject, ObservableObject {
         isLoading = false
     }
     
+    // MARK: - Apple Sign In
+
+        func signInWithApple() {
+            let nonce = randomNonceString()
+            currentNonce = nonce
+
+            let request = ASAuthorizationAppleIDProvider().createRequest()
+            request.requestedScopes = [.fullName, .email]
+            request.nonce = sha256(nonce)
+
+            let controller = ASAuthorizationController(authorizationRequests: [request])
+            controller.delegate = self
+            controller.presentationContextProvider = self
+            controller.performRequests()
+        }
+    // MARK: - Nonce Helpers
+
+    private func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        var randomBytes = [UInt8](repeating: 0, count: length)
+        let errorCode = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+        if errorCode != errSecSuccess {
+            fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
+        }
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        return String(randomBytes.map { charset[Int($0) % charset.count] })
+    }
+
+    private func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        return hashedData.compactMap { String(format: "%02x", $0) }.joined()
+    }
     
     // MARK: - Firestore Helpers
 
@@ -273,5 +306,78 @@ final class AuthenticationManager: NSObject, ObservableObject {
         default:
             return "Something went wrong. Please try again."
         }
+    }
+}
+extension AuthenticationManager: ASAuthorizationControllerDelegate {
+    nonisolated func authorizationController(controller: ASAuthorizationController,
+                                             didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let appleIDToken = appleIDCredential.identityToken,
+              let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+            Task { @MainActor in 
+                self.authError = "Apple sign-in failed: Invalid credentials"
+                print("❌ Apple Sign-In: Failed to extract credentials")
+            }
+            return
+        }
+
+        Task { @MainActor in
+            guard let nonce = self.currentNonce else {
+                self.authError = "Apple sign-in failed: Missing nonce"
+                print("❌ Apple Sign-In: currentNonce is nil")
+                return
+            }
+
+            let credential = OAuthProvider.appleCredential(
+                withIDToken: idTokenString,
+                rawNonce: nonce,
+                fullName: appleIDCredential.fullName
+            )
+
+            self.isLoading = true
+            do {
+                let authResult = try await Auth.auth().signIn(with: credential)
+                let uid = authResult.user.uid
+                let email = appleIDCredential.email ?? authResult.user.email ?? ""
+
+                let firstName = appleIDCredential.fullName?.givenName ?? ""
+                let lastName  = appleIDCredential.fullName?.familyName ?? ""
+                let displayName = [firstName, lastName].filter { !$0.isEmpty }.joined(separator: " ")
+                let finalName = displayName.isEmpty
+                    ? (email.components(separatedBy: "@").first ?? "User")
+                    : displayName
+
+                let db = Firestore.firestore()
+                let doc = try? await db.collection("users").document(uid).getDocument()
+                if doc?.exists == true {
+                    try? await self.updateLastLogin(userId: uid)
+                } else {
+                    try? await self.createUserDocument(userId: uid, email: email, displayName: finalName)
+                }
+                await self.fetchUserProfile(userId: uid, email: email)
+            } catch {
+                self.authError = error.localizedDescription
+                print("❌ Apple Sign-In error: \(error)")
+                print("Error details: \(error as NSError)")
+            }
+            self.isLoading = false
+        }
+    }
+    
+    nonisolated func authorizationController(controller: ASAuthorizationController,
+                                             didCompleteWithError error: Error) {
+        let asError = error as? ASAuthorizationError
+        if asError?.code != .canceled {
+            Task { @MainActor in self.authError = "Apple sign-in failed. Please try again." }
+        }
+    }
+}
+
+extension AuthenticationManager: ASAuthorizationControllerPresentationContextProviding {
+    nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
     }
 }

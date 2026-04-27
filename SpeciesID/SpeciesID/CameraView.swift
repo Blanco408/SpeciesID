@@ -201,14 +201,16 @@ struct CameraView: View {
                     }
 
                     // Flash placeholder for symmetry
-                    VStack(spacing: 4) {
-                        Image(systemName: "bolt.slash.fill")
-                            .font(.system(size: 22))
-                        Text("Flash")
-                            .font(.caption2)
+                    Button(action: { camera.toggleFlash() }) {
+                        VStack(spacing: 4) {
+                            Image(systemName: camera.flashMode == .off ? "bolt.slash.fill" : "bolt.fill")
+                                .font(.system(size: 22))
+                            Text("Flash")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(camera.flashMode == .off ? .white.opacity(0.5) : .yellow)
+                        .frame(width: 60)
                     }
-                    .foregroundStyle(.white.opacity(0.5))
-                    .frame(width: 60)
                 }
                 .padding(.vertical, 24)
                 .padding(.bottom, 8)
@@ -417,6 +419,7 @@ class CameraManager: NSObject, ObservableObject {
     private var photoCompletion: ((UIImage?) -> Void)?
     private var isConfigured = false
 
+    @Published var flashMode: AVCaptureDevice.FlashMode = .off
     /// The latest frame captured for live classification (published on main actor).
     @Published var latestFrame: UIImage?
     /// Incremented each time a new frame is published, to trigger SwiftUI onChange.
@@ -444,10 +447,15 @@ class CameraManager: NSObject, ObservableObject {
             self?.session.stopRunning()
         }
     }
+    
+    func toggleFlash() {
+        flashMode = flashMode == .off ? .on : .off
+    }
 
     func capturePhoto(completion: @escaping (UIImage?) -> Void) {
         photoCompletion = completion
         let settings = AVCapturePhotoSettings()
+        settings.flashMode = flashMode
         output.capturePhoto(with: settings, delegate: self)
     }
 

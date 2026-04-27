@@ -14,8 +14,9 @@ final class SyncService: ObservableObject {
         case failed(String)
     }
 
-    private let db = Firestore.firestore()
     private let retryQueueKey = "syncRetryQueue"
+    
+    private lazy var db = Firestore.firestore()
 
     // MARK: - Retry Queue
 
