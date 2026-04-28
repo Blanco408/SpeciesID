@@ -8,7 +8,9 @@ struct ObservationDetailView: View {
     @State private var image: UIImage?
     @State private var showDeleteConfirmation = false
     @State private var showShareSheet = false
+    @State private var shareItems: [Any] = []
     @StateObject private var classifier = SpeciesClassifierService()
+    @StateObject private var exportService = ExportService()
     @Environment(\.dismiss) private var dismiss
 
     private var primary: LocalSpeciesIdentification? {
@@ -69,11 +71,7 @@ struct ObservationDetailView: View {
             Text("This will permanently delete this observation and its photo. This cannot be undone.")
         }
         .sheet(isPresented: $showShareSheet) {
-            if let image {
-                ShareSheet(activityItems: [shareText(), image])
-            } else {
-                ShareSheet(activityItems: [shareText()])
-            }
+            ShareSheet(activityItems: shareItems)
         }
     }
 
@@ -369,7 +367,7 @@ struct ObservationDetailView: View {
     private var actionsSection: some View {
         VStack(spacing: 12) {
             Button {
-                showShareSheet = true
+                shareObservation()
             } label: {
                 HStack {
                     Image(systemName: "square.and.arrow.up")
@@ -381,6 +379,31 @@ struct ObservationDetailView: View {
                 .padding(.vertical, 14)
                 .background(AppColors.darkGreen)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Button {
+                exportCSV()
+            } label: {
+                HStack {
+                    Image(systemName: "tablecells")
+                    Text("Export as CSV")
+                }
+                .font(.body.weight(.medium))
+                .foregroundColor(AppColors.darkGreen)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color(.systemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(AppColors.darkGreen.opacity(0.4), lineWidth: 1)
+                )
+            }
+
+            if let error = exportService.exportError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red)
             }
 
             Button {
@@ -412,6 +435,19 @@ struct ObservationDetailView: View {
         if let imagePath = observation.imagePath {
             image = ImageStore.shared.loadImage(filename: imagePath)
         }
+    }
+
+    private func shareObservation() {
+        var items: [Any] = [shareText()]
+        if let image { items.append(image) }
+        shareItems = items
+        showShareSheet = true
+    }
+
+    private func exportCSV() {
+        guard let url = exportService.exportSingleObservation(observation) else { return }
+        shareItems = [url]
+        showShareSheet = true
     }
 
     private func confidenceColor(_ confidence: Double) -> Color {

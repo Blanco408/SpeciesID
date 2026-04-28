@@ -42,21 +42,7 @@ class ExportService: ObservableObject {
         }
 
         // Snapshot observation data on the main thread before moving to background
-        let snapshots = observations.map {
-            let identifications = ObservationStore.shared.identifications(for: $0)
-            let primary = identifications.first
-            return ObsSnapshot(
-                speciesId: primary?.displayName ?? $0.speciesId,
-                allSpecies: identifications.map(\.displayName),
-                identifications: identifications,
-                timestamp: $0.timestamp,
-                latitude: $0.latitude,
-                longitude: $0.longitude,
-                confidence: primary?.confidenceScore ?? $0.confidence,
-                imagePath: $0.imagePath,
-                notes: $0.notes
-            )
-        }
+        let snapshots = observations.map { makeSnapshot(from: $0) }
 
         let format = options.format
         let includePhotos = options.includePhotos
@@ -135,119 +121,236 @@ class ExportService: ObservableObject {
         ObservationStore.shared.getObservations(from: startDate, to: endDate).count
     }
 
-    // MARK: - CSV Generation (from snapshots, safe for background thread)
+    // MARK: - Single Observation CSV Export
+
+    func exportSingleObservation(_ observation: SavedObservation) -> URL? {
+        exportError = nil
+
+        let snapshot = makeSnapshot(from: observation)
+        let csv = Self.csvHeader + Self.csvRows(for: snapshot)
+        let filename = Self.csvFilename(for: snapshot)
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+
+        try? FileManager.default.removeItem(at: fileURL)
+
+        do {
+            try csv.write(to: fileURL, atomically: true, encoding: .utf8)
+            return fileURL
+        } catch {
+            exportError = "Failed to write CSV file."
+            return nil
+        }
+    }
+
+    private func makeSnapshot(from observation: SavedObservation) -> ObsSnapshot {
+        ObsSnapshot(
+            occurrenceId: observation.id?.uuidString ?? UUID().uuidString,
+            eventDate: observation.timestamp,
+            latitude: observation.latitude,
+            longitude: observation.longitude,
+            identifications: ObservationStore.shared.identifications(for: observation),
+            imagePath: observation.imagePath,
+            notes: observation.notes
+        )
+    }
+
+    // MARK: - CSV Generation (Darwin Core aligned, safe for background thread)
 
     private struct ObsSnapshot {
-        let speciesId: String?
-        let allSpecies: [String]
-        let identifications: [LocalSpeciesIdentification]
-        let timestamp: Date?
+        let occurrenceId: String
+        let eventDate: Date?
         let latitude: Double
         let longitude: Double
-        let confidence: Double
+        let identifications: [LocalSpeciesIdentification]
         let imagePath: String?
         let notes: String?
     }
 
-    private nonisolated func generateCSVFromSnapshots(_ snapshots: [ObsSnapshot], directory: URL) {
-        let fileURL = directory.appendingPathComponent("observations.csv")
+    /// Maps speciesId → scientific binomial. Loaded once from the bundled metadata file.
+    private nonisolated static let scientificNamesByID: [String: String] = {
+        guard let url = Bundle.main.url(forResource: "species_metadata", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let file = try? JSONDecoder().decode(SpeciesMetadataFile.self, from: data) else {
+            return [:]
+        }
+        return Dictionary(uniqueKeysWithValues: file.species.map { ($0.id, $0.scientificName) })
+    }()
 
-        var csvContent = "species_name,all_species,species_count,date,time,latitude,longitude,confidence,photo_filename,notes\n"
+    private nonisolated static let csvColumns: [String] = [
+        "occurrence_id",
+        "event_date",
+        "decimal_latitude",
+        "decimal_longitude",
+        "geodetic_datum",
+        "scientific_name",
+        "vernacular_name",
+        "species_id",
+        "individual_count",
+        "basis_of_record",
+        "identified_by",
+        "model_version",
+        "confidence",
+        "is_user_verified",
+        "alternative_predictions",
+        "photo_filename",
+        "notes",
+    ]
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
+    private nonisolated static let csvHeader = csvColumns.joined(separator: ",") + "\n"
 
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "HH:mm:ss"
+    /// Emits one CSV row per identification (multi-species observations produce multiple rows
+    /// sharing the same occurrence_id). Falls back to a single empty-species row when no
+    /// identifications exist.
+    private nonisolated static func csvRows(for snap: ObsSnapshot) -> String {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
 
-        for obs in snapshots {
-            let species = escapeCSV(obs.speciesId ?? "Unidentified")
-            let allSpecies = escapeCSV(obs.allSpecies.joined(separator: "; "))
-            let speciesCount = "\(obs.identifications.count)"
-            let date = obs.timestamp.map { dateFormatter.string(from: $0) } ?? ""
-            let time = obs.timestamp.map { timeFormatter.string(from: $0) } ?? ""
-            let lat = String(format: "%.6f", obs.latitude)
-            let lon = String(format: "%.6f", obs.longitude)
-            let confidence = String(format: "%.2f", obs.confidence)
-            let photo = obs.imagePath ?? ""
-            let notes = escapeCSV(obs.notes ?? "")
+        let eventDate = snap.eventDate.map { isoFormatter.string(from: $0) } ?? ""
+        let hasCoords = !(snap.latitude == 0 && snap.longitude == 0)
+        let lat = hasCoords ? String(format: "%.6f", snap.latitude) : ""
+        let lon = hasCoords ? String(format: "%.6f", snap.longitude) : ""
+        let datum = hasCoords ? "WGS84" : ""
+        let photoFilename = escapeCSV(snap.imagePath ?? "")
+        let notes = escapeCSV(snap.notes ?? "")
 
-            csvContent += "\(species),\(allSpecies),\(speciesCount),\(date),\(time),\(lat),\(lon),\(confidence),\(photo),\(notes)\n"
+        guard !snap.identifications.isEmpty else {
+            return joinRow([
+                snap.occurrenceId, eventDate, lat, lon, datum,
+                "", "", "", "1",
+                "HumanObservation", "", "", "", "false",
+                "",
+                photoFilename, notes,
+            ])
         }
 
+        var rows = ""
+        for ident in snap.identifications {
+            let scientificName = scientificNamesByID[ident.speciesId] ?? ""
+            let basis = ident.isUserVerified ? "HumanObservation" : "MachineObservation"
+            let identifiedBy = ident.isUserVerified ? "User" : "EcoSnap ML"
+            let confidence = String(format: "%.4f", ident.confidenceScore)
+            let alternatives = ident.alternativeSpecies
+                .map { "\($0.displayName) (\(Int(round($0.confidenceScore * 100)))%)" }
+                .joined(separator: "; ")
+
+            rows += joinRow([
+                snap.occurrenceId,
+                eventDate,
+                lat,
+                lon,
+                datum,
+                escapeCSV(scientificName),
+                escapeCSV(ident.displayName),
+                escapeCSV(ident.speciesId),
+                "1",
+                basis,
+                identifiedBy,
+                escapeCSV(ident.modelVersion),
+                confidence,
+                ident.isUserVerified ? "true" : "false",
+                escapeCSV(alternatives),
+                photoFilename,
+                notes,
+            ])
+        }
+        return rows
+    }
+
+    private nonisolated static func joinRow(_ values: [String]) -> String {
+        values.joined(separator: ",") + "\n"
+    }
+
+    private nonisolated static func csvFilename(for snap: ObsSnapshot) -> String {
+        let primary = snap.identifications.first?.displayName ?? "Observation"
+        let speciesPart = primary
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "_")
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        let dateStr = dateFormatter.string(from: snap.eventDate ?? Date())
+        return "\(speciesPart)_\(dateStr).csv"
+    }
+
+    private nonisolated func generateCSVFromSnapshots(_ snapshots: [ObsSnapshot], directory: URL) {
+        let fileURL = directory.appendingPathComponent("observations.csv")
+        var csvContent = Self.csvHeader
+        for snap in snapshots {
+            csvContent += Self.csvRows(for: snap)
+        }
         try? csvContent.write(to: fileURL, atomically: true, encoding: .utf8)
     }
 
-    // MARK: - JSON Generation (from snapshots, safe for background thread)
+    // MARK: - JSON Generation (Darwin Core aligned, safe for background thread)
 
     private nonisolated func generateJSONFromSnapshots(_ snapshots: [ObsSnapshot], directory: URL) {
         let fileURL = directory.appendingPathComponent("observations.json")
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "HH:mm:ss"
-
         let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
 
-        var obsArray: [[String: Any]] = []
-
-        for obs in snapshots {
+        let observationsPayload: [[String: Any]] = snapshots.map { obs in
             var dict: [String: Any] = [
-                "species_name": obs.speciesId ?? "Unidentified",
-                "all_species": obs.allSpecies,
-                "species_count": obs.identifications.count,
-                "date": obs.timestamp.map { dateFormatter.string(from: $0) } ?? "",
-                "time": obs.timestamp.map { timeFormatter.string(from: $0) } ?? "",
-                "latitude": obs.latitude,
-                "longitude": obs.longitude,
-                "confidence": obs.confidence,
+                "occurrence_id": obs.occurrenceId,
+                "event_date": obs.eventDate.map { isoFormatter.string(from: $0) } ?? "",
                 "photo_filename": obs.imagePath ?? "",
-                "identifications": obs.identifications.map { identification in
-                    var payload: [String: Any] = [
-                        "id": identification.id,
-                        "species_id": identification.speciesId,
-                        "display_name": identification.displayName,
-                        "confidence_score": identification.confidenceScore,
-                        "model_version": identification.modelVersion,
-                        "is_user_verified": identification.isUserVerified,
-                        "alternative_species": identification.alternativeSpecies.map {
-                            [
-                                "species_id": $0.speciesId,
-                                "display_name": $0.displayName,
-                                "confidence_score": $0.confidenceScore,
-                            ]
-                        },
-                    ]
-
-                    if let box = identification.boundingBox {
-                        payload["bounding_box"] = [
-                            "x": box.x,
-                            "y": box.y,
-                            "width": box.width,
-                            "height": box.height,
-                        ]
-                    }
-
-                    return payload
-                },
+                "identifications": obs.identifications.map { Self.identificationPayload($0) },
             ]
+
+            let hasCoords = !(obs.latitude == 0 && obs.longitude == 0)
+            if hasCoords {
+                dict["decimal_latitude"] = obs.latitude
+                dict["decimal_longitude"] = obs.longitude
+                dict["geodetic_datum"] = "WGS84"
+            }
             if let notes = obs.notes, !notes.isEmpty {
                 dict["notes"] = notes
             }
-            obsArray.append(dict)
+            return dict
         }
 
         let exportDict: [String: Any] = [
             "export_date": isoFormatter.string(from: Date()),
             "observation_count": snapshots.count,
-            "observations": obsArray,
+            "observations": observationsPayload,
         ]
 
-        if let jsonData = try? JSONSerialization.data(withJSONObject: exportDict, options: .prettyPrinted) {
+        if let jsonData = try? JSONSerialization.data(withJSONObject: exportDict, options: [.prettyPrinted, .sortedKeys]) {
             try? jsonData.write(to: fileURL)
         }
+    }
+
+    private nonisolated static func identificationPayload(_ ident: LocalSpeciesIdentification) -> [String: Any] {
+        var payload: [String: Any] = [
+            "scientific_name": scientificNamesByID[ident.speciesId] ?? "",
+            "vernacular_name": ident.displayName,
+            "species_id": ident.speciesId,
+            "individual_count": 1,
+            "basis_of_record": ident.isUserVerified ? "HumanObservation" : "MachineObservation",
+            "identified_by": ident.isUserVerified ? "User" : "EcoSnap ML",
+            "model_version": ident.modelVersion,
+            "confidence": ident.confidenceScore,
+            "is_user_verified": ident.isUserVerified,
+            "alternative_predictions": ident.alternativeSpecies.map {
+                [
+                    "scientific_name": scientificNamesByID[$0.speciesId] ?? "",
+                    "vernacular_name": $0.displayName,
+                    "species_id": $0.speciesId,
+                    "confidence": $0.confidenceScore,
+                ]
+            },
+        ]
+
+        if let box = ident.boundingBox {
+            payload["bounding_box"] = [
+                "x": box.x,
+                "y": box.y,
+                "width": box.width,
+                "height": box.height,
+            ]
+        }
+
+        return payload
     }
 
     // MARK: - Zip Archive
@@ -279,17 +382,11 @@ class ExportService: ObservableObject {
 
     // MARK: - Helpers
 
-    private nonisolated func escapeCSV(_ string: String) -> String {
+    private nonisolated static func escapeCSV(_ string: String) -> String {
         if string.contains(",") || string.contains("\"") || string.contains("\n") {
             let escaped = string.replacingOccurrences(of: "\"", with: "\"\"")
             return "\"\(escaped)\""
         }
         return string
-    }
-
-    private func formattedDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
     }
 }
