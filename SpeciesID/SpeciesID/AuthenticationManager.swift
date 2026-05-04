@@ -115,20 +115,21 @@ final class AuthenticationManager: NSObject, ObservableObject {
         }
 
         do {
-            GIDSignIn.sharedInstance.signOut() 
+            GIDSignIn.sharedInstance.signOut()
             try Auth.auth().signOut()
             currentUser = nil
             isAuthenticated = false
             authError = nil
+            ObservationStore.shared.deleteAllObservations()  // ADD THIS LINE
         } catch {
             authError = "Failed to sign out. Please try again."
             print("Sign out error: \(error.localizedDescription)")
         }
     }
-
     // MARK: - Guest Login
 
     func signInAsGuest() {
+        ObservationStore.shared.deleteAllObservations()  
         isAuthenticated = true
         currentUser = nil
     }

@@ -145,6 +145,25 @@ class ObservationStore {
         save()
         return observation.id!
     }
+    func deleteAllObservations() {
+        // Delete associated images first
+        for obs in getAllObservations() {
+            if let path = obs.imagePath {
+                ImageStore.shared.deleteImage(at: path)
+            }
+        }
+        
+        let request: NSFetchRequest<NSFetchRequestResult> = NSFetchRequest(entityName: "SavedObservation")
+        let deleteRequest = NSBatchDeleteRequest(fetchRequest: request)
+        
+        do {
+            try context.execute(deleteRequest)
+            context.reset()  // Clear in-memory cached objects
+            try context.save()
+        } catch {
+            print("Failed to delete all observations: \(error)")
+        }
+    }
 
     func getAllObservations() -> [SavedObservation] {
         let request = NSFetchRequest<SavedObservation>(entityName: "SavedObservation")
