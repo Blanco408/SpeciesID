@@ -31,7 +31,14 @@ DEFAULT_MODEL_PATH = os.path.join(ML_DIR, "models", "best_model.pth")
 DEFAULT_OUTPUT_PATH = os.path.join(ML_DIR, "models", "SpeciesClassifier.mlmodel")
 
 class NormalizedModel(torch.nn.Module):
-    """Wraps model with ImageNet normalization so Core ML only needs scale=1/255."""
+    """Wraps model with ImageNet normalization + softmax.
+
+    The softmax is critical: Core ML's `ClassifierConfig` for `mlprogram`
+    targets does NOT auto-insert one when the traced model emits raw logits.
+    Without it, `classLabel_probs` contains logits and Vision's
+    `VNClassificationObservation.confidence` returns values >1.0 which the
+    iOS code clamps to 1.0 — looking like false 100% predictions.
+    """
 
     def __init__(self, base_model):
         super().__init__()
@@ -42,7 +49,8 @@ class NormalizedModel(torch.nn.Module):
     def forward(self, x):
         # x comes in as [0, 1] after Core ML scale=1/255
         x = (x - self.mean) / self.std
-        return self.base_model(x)
+        logits = self.base_model(x)
+        return torch.softmax(logits, dim=1)
 
 
 def convert_to_coreml(model_path: str, output_path: str):
