@@ -3,8 +3,8 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @State private var showLogoutConfirmation = false
-    @State private var autoSavePhotos = true
-    @State private var confidenceThreshold = 0.7
+    @AppStorage("autoSavePhotos") private var autoSavePhotos = true
+    @AppStorage("confidenceThreshold") private var confidenceThreshold = 0.55
     @State private var storageUsed: String = "Calculating..."
 
     var body: some View {

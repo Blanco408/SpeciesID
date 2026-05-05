@@ -123,10 +123,22 @@ class SpeciesClassifierService: ObservableObject {
     private var vnModel: VNCoreMLModel?
     private var speciesMetadata: [String: SpeciesMetadataEntry] = [:]
 
+    static let confidenceThresholdKey = "confidenceThreshold"
+    static let defaultMinimumConfidence = 0.55
+
     private let thresholds: ClassifierThresholds
-    private let minimumDetectionConfidence: Double
+    /// Calibrated baseline from classifier_thresholds.json. Used when the user
+    /// has not set a manual confidence override in Settings.
+    private let calibratedMinimumConfidence: Double
     private let minimumTopMargin: Double
     private let fullFrameFallbackConfidence: Double
+
+    /// User-overridable in Settings. Falls back to the calibrated value from
+    /// classifier_thresholds.json when no override exists.
+    private var minimumDetectionConfidence: Double {
+        let stored = UserDefaults.standard.double(forKey: Self.confidenceThresholdKey)
+        return stored > 0 ? stored : calibratedMinimumConfidence
+    }
     private let maxDetections = 3
     private let overlapThreshold = 0.30
     /// Maximum entropy ratio (actual/uniform) above which we reject as "unknown"
@@ -138,7 +150,7 @@ class SpeciesClassifierService: ObservableObject {
     init() {
         let loaded = ClassifierThresholds.loadFromBundle()
         self.thresholds = loaded
-        self.minimumDetectionConfidence = loaded.minimumDetectionConfidence
+        self.calibratedMinimumConfidence = loaded.minimumDetectionConfidence
         self.minimumTopMargin = loaded.minimumTopMargin
         // The full-frame fallback historically ran 0.05 below the windowed
         // threshold; preserve that ratio so calibration translates cleanly.

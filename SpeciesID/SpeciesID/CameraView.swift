@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import Photos
 import CoreLocation
 import Combine
 import AVFoundation
@@ -24,6 +25,7 @@ struct CameraView: View {
     @State private var scanLineOffset: CGFloat = 0
     @State private var liveLabel: String = ""
     @State private var liveConfidence: Double = 0
+    @AppStorage("autoSavePhotos") private var autoSavePhotos = true
 
     var body: some View {
         ZStack {
@@ -290,9 +292,19 @@ struct CameraView: View {
                 }
 
                 // Notes field
-                TextField("Add notes (optional)", text: $notes)
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Field Notes", systemImage: "note.text")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.secondary)
+                    TextField(
+                        "Describe behavior, habitat, depth, conditions, group size…",
+                        text: $notes,
+                        axis: .vertical
+                    )
                     .textFieldStyle(.roundedBorder)
-                    .padding(.horizontal)
+                    .lineLimit(5...12)
+                }
+                .padding(.horizontal)
 
                 // Location
                 HStack {
@@ -342,7 +354,19 @@ struct CameraView: View {
         camera.capturePhoto { image in
             DispatchQueue.main.async {
                 self.selectedImage = image
+                if self.autoSavePhotos, let image = image {
+                    self.saveToPhotoLibrary(image)
+                }
             }
+        }
+    }
+
+    private func saveToPhotoLibrary(_ image: UIImage) {
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else { return }
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            } completionHandler: { _, _ in }
         }
     }
 
