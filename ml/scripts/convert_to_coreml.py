@@ -9,7 +9,9 @@ The output .mlmodel includes:
 - Metadata (author, description, version)
 """
 
+import json
 import os
+import shutil
 import sys
 import argparse
 
@@ -189,16 +191,66 @@ def validate_coreml_model(mlmodel, pytorch_model_path: str, idx_to_class: dict[i
         print(f"Validation skipped: {e}")
 
 
+def _copy_thresholds(thresholds_json: str, output_path: str) -> str:
+    """Copy thresholds.json to a sibling location next to the mlpackage.
+
+    The iOS app loads `classifier_thresholds.json` from its bundle. We write
+    the file alongside the mlpackage so a single drag-into-Xcode picks up both.
+    """
+    if not os.path.exists(thresholds_json):
+        raise FileNotFoundError(f"--thresholds-json not found: {thresholds_json}")
+
+    target_dir = os.path.dirname(os.path.abspath(output_path))
+    target_path = os.path.join(target_dir, "classifier_thresholds.json")
+    shutil.copyfile(thresholds_json, target_path)
+
+    # Echo the file so the user sees what's about to ship.
+    with open(target_path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+    print(f"\nThresholds bundled at: {target_path}")
+    print(f"  conf>={payload.get('minimumDetectionConfidence')}, "
+          f"margin>={payload.get('minimumTopMargin')}, "
+          f"entropy<={payload.get('maxEntropyRatio')}, "
+          f"energy<={payload.get('energyThreshold')}")
+    return target_path
+
+
 def main():
     parser = argparse.ArgumentParser(description="Convert PyTorch model to Core ML")
     parser.add_argument("--model", default=DEFAULT_MODEL_PATH, help="Path to PyTorch checkpoint")
     parser.add_argument("--output", default=DEFAULT_OUTPUT_PATH, help="Output .mlmodel path")
     parser.add_argument("--skip-validation", action="store_true", help="Skip prediction validation")
+    parser.add_argument(
+        "--thresholds-json",
+        default=None,
+        help="Path to thresholds.json produced by evaluate_ood.py. If provided, "
+             "it will be copied to a sibling 'classifier_thresholds.json' for "
+             "iOS bundle inclusion.",
+    )
     args = parser.parse_args()
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
 
     mlmodel, idx_to_class = convert_to_coreml(args.model, args.output)
+
+    # Verify model emits the `nothing` class label so the iOS abstain path works.
+    class_labels = list(idx_to_class.values())
+    if "nothing" not in class_labels:
+        print(
+            "WARNING: Core ML model does not include a 'nothing' class label. "
+            "iOS will not be able to use the explicit-abstain detector."
+        )
+    else:
+        print("PASS: Core ML model includes 'nothing' class.")
+
+    if args.thresholds_json:
+        _copy_thresholds(args.thresholds_json, args.output)
+    else:
+        print(
+            "\nNOTE: --thresholds-json not provided. iOS will fall back to its "
+            "hardcoded default thresholds. Run evaluate_ood.py and re-convert "
+            "with --thresholds-json for calibrated rejection."
+        )
 
     if not args.skip_validation:
         validate_coreml_model(mlmodel, args.model, idx_to_class)

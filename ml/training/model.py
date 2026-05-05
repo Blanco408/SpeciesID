@@ -93,6 +93,77 @@ def _infer_num_classes_from_state_dict(state_dict) -> int:
     return len(DEFAULT_CLASS_TO_IDX)
 
 
+def expand_classifier_head(
+    model: nn.Module,
+    new_num_classes: int,
+    new_class_indices: list[int] | None = None,
+) -> nn.Module:
+    """Grow the final Linear layer to ``new_num_classes`` while preserving the
+    weights of the existing classes.
+
+    Used to fine-tune a pretrained 20-class checkpoint into a 21-class model that
+    includes the ``nothing`` abstain class. Existing rows are copied verbatim;
+    rows for newly-added class indices are initialized with the per-feature
+    mean of the existing rows (a stable, near-uniform prior) plus a small
+    Gaussian perturbation so the optimizer can break symmetry quickly.
+
+    Args:
+        model: A model produced by ``create_model``.
+        new_num_classes: Target number of output classes.
+        new_class_indices: Indices in the new head that should be initialized
+            from scratch. Defaults to the trailing indices that didn't exist
+            in the old head, which is correct when the new class is appended
+            but wrong when the alphabetic sort moves classes around -- callers
+            should pass this explicitly when they know the mapping.
+    """
+    if not isinstance(model.classifier[-1], nn.Linear):
+        raise TypeError(
+            f"expand_classifier_head expects model.classifier[-1] to be nn.Linear, "
+            f"got {type(model.classifier[-1])}"
+        )
+
+    old_layer = model.classifier[-1]
+    in_features = old_layer.in_features
+    old_num_classes = old_layer.out_features
+
+    if new_num_classes == old_num_classes:
+        return model
+    if new_num_classes < old_num_classes:
+        raise ValueError(
+            f"expand_classifier_head can only grow the head; "
+            f"new={new_num_classes} < old={old_num_classes}"
+        )
+
+    new_layer = nn.Linear(in_features, new_num_classes)
+
+    # Decide which rows to keep vs init.
+    if new_class_indices is None:
+        new_class_indices = list(range(old_num_classes, new_num_classes))
+    new_set = set(new_class_indices)
+    old_indices_to_copy = [i for i in range(new_num_classes) if i not in new_set]
+    if len(old_indices_to_copy) != old_num_classes:
+        raise ValueError(
+            f"new_class_indices implies {len(new_set)} new rows but "
+            f"{new_num_classes - old_num_classes} are needed"
+        )
+
+    with torch.no_grad():
+        # Copy existing rows in order into the slots not flagged as new.
+        for new_idx, old_idx in zip(old_indices_to_copy, range(old_num_classes)):
+            new_layer.weight[new_idx].copy_(old_layer.weight[old_idx])
+            new_layer.bias[new_idx].copy_(old_layer.bias[old_idx])
+
+        # Initialize new rows from the mean-of-existing prior + small noise.
+        prior_w = old_layer.weight.mean(dim=0)
+        prior_b = old_layer.bias.mean()
+        for idx in new_class_indices:
+            new_layer.weight[idx].copy_(prior_w + torch.randn_like(prior_w) * 0.01)
+            new_layer.bias[idx].fill_(prior_b.item())
+
+    model.classifier[-1] = new_layer
+    return model
+
+
 def load_trained_model(
     checkpoint_path: str,
     device: str = "cpu",

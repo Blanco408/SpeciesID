@@ -44,6 +44,34 @@ def load_manifest(manifest_path: str, image_dir: str) -> list:
     return entries
 
 
+def load_negatives_manifest(manifest_path: str) -> list:
+    """Load the negatives manifest produced by build_negative_dataset.py.
+
+    Each surviving row becomes a class_label='nothing' training entry. We use
+    `source_taxon` as a pseudo user_id so the user-aware split still avoids
+    leakage between negative families across train/val/test.
+    """
+    entries = []
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            img_path = row.get("image_path", "").strip()
+            if not img_path or not os.path.exists(img_path):
+                continue
+            source_taxon = row.get("source_taxon") or "unknown"
+            subset = row.get("subset") or "negative"
+            obs_id = row.get("observation_id") or os.path.splitext(os.path.basename(img_path))[0]
+            entries.append({
+                "observation_id": obs_id,
+                "image_path": img_path,
+                "class_label": "nothing",
+                # `subset:taxon` keeps splits coherent: e.g. all kelp_canopy negatives
+                # land in the same fold rather than being scattered.
+                "user_id": f"neg:{subset}:{source_taxon}",
+            })
+    return entries
+
+
 def split_by_user(entries: list) -> tuple:
     """
     Split entries by user_id to prevent data leakage.
@@ -146,6 +174,12 @@ def main():
     parser.add_argument("--manifest", default=DEFAULT_MANIFEST, help="Manifest CSV from download step")
     parser.add_argument("--image-dir", default=DEFAULT_IMAGE_DIR, help="Image directory")
     parser.add_argument("--output-dir", default=DEFAULT_SPLITS_DIR, help="Output directory for split CSVs")
+    parser.add_argument(
+        "--negatives-manifest",
+        default=None,
+        help="Optional manifest CSV from build_negative_dataset.py; rows are added "
+             "to every split as the 'nothing' class.",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -153,6 +187,12 @@ def main():
     print(f"Loading manifest: {args.manifest}")
     entries = load_manifest(args.manifest, args.image_dir)
     print(f"Total valid entries: {len(entries)}")
+
+    if args.negatives_manifest:
+        print(f"Loading negatives manifest: {args.negatives_manifest}")
+        negative_entries = load_negatives_manifest(args.negatives_manifest)
+        print(f"Negative entries (class_label='nothing'): {len(negative_entries)}")
+        entries.extend(negative_entries)
 
     if len(entries) == 0:
         print("ERROR: No valid entries found!")

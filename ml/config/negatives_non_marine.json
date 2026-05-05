@@ -1,0 +1,119 @@
+{
+  "quality_grade": "research",
+  "require_geotag": false,
+  "_comment": "Diverse non-marine subjects (terrestrial animals, plants, urban scenes via iNat) so the model learns 'a clear photograph that isn't an intertidal organism' should map to nothing. Uses iNat fetcher rather than ImageNet URL list to avoid link rot.",
+  "classes": [
+    {
+      "label": "domestic_dog",
+      "taxon_query": "Canis familiaris",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Mammalia",
+      "max_images": 250
+    },
+    {
+      "label": "domestic_cat",
+      "taxon_query": "Felis catus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Mammalia",
+      "max_images": 250
+    },
+    {
+      "label": "house_sparrow",
+      "taxon_query": "Passer domesticus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Aves",
+      "max_images": 250
+    },
+    {
+      "label": "american_robin",
+      "taxon_query": "Turdus migratorius",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Aves",
+      "max_images": 250
+    },
+    {
+      "label": "honey_bee",
+      "taxon_query": "Apis mellifera",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Insecta",
+      "max_images": 250
+    },
+    {
+      "label": "monarch_butterfly",
+      "taxon_query": "Danaus plexippus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Insecta",
+      "max_images": 250
+    },
+    {
+      "label": "ladybug",
+      "taxon_query": "Coccinellidae",
+      "preferred_rank": "family",
+      "iconic_taxon_name": "Insecta",
+      "max_images": 250
+    },
+    {
+      "label": "garden_snail",
+      "taxon_query": "Cornu aspersum",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 250
+    },
+    {
+      "label": "oak_tree",
+      "taxon_query": "Quercus",
+      "preferred_rank": "genus",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "california_poppy",
+      "taxon_query": "Eschscholzia californica",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "sunflower",
+      "taxon_query": "Helianthus annuus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "rose",
+      "taxon_query": "Rosa",
+      "preferred_rank": "genus",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "western_grey_squirrel",
+      "taxon_query": "Sciurus griseus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Mammalia",
+      "max_images": 250
+    },
+    {
+      "label": "raccoon",
+      "taxon_query": "Procyon lotor",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Mammalia",
+      "max_images": 250
+    },
+    {
+      "label": "western_fence_lizard",
+      "taxon_query": "Sceloporus occidentalis",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Reptilia",
+      "max_images": 250
+    },
+    {
+      "label": "pacific_tree_frog",
+      "taxon_query": "Pseudacris regilla",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Amphibia",
+      "max_images": 250
+    }
+  ]
+}

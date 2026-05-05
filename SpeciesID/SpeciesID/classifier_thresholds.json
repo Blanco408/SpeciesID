@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "minimumDetectionConfidence": 0.3,
+  "minimumTopMargin": 0.0,
+  "maxEntropyRatio": 0.65,
+  "energyThreshold": -3.9462,
+  "nothingClassId": "nothing",
+  "calibration": {
+    "target_tpr": 0.85,
+    "achieved_tpr": 0.8545,
+    "achieved_tnr": 0.7938,
+    "n_in_scope": 4872,
+    "n_ood": 1261
+  }
+}

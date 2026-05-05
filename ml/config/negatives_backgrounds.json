@@ -1,0 +1,63 @@
+{
+  "quality_grade": "research",
+  "require_geotag": false,
+  "_comment": "Marine/intertidal habitats and substrates without focal animals. Used as 'nothing' training examples so the model learns underwater scenes without an organism shouldn't predict any species.",
+  "classes": [
+    {
+      "label": "kelp_canopy",
+      "taxon_query": "Macrocystis pyrifera",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "bull_kelp",
+      "taxon_query": "Nereocystis luetkeana",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "feather_boa_kelp",
+      "taxon_query": "Egregia menziesii",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "surfgrass",
+      "taxon_query": "Phyllospadix",
+      "preferred_rank": "genus",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "coralline_algae",
+      "taxon_query": "Corallina",
+      "preferred_rank": "genus",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "rockweed",
+      "taxon_query": "Silvetia compressa",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "sea_lettuce",
+      "taxon_query": "Ulva",
+      "preferred_rank": "genus",
+      "iconic_taxon_name": "Plantae",
+      "max_images": 250
+    },
+    {
+      "label": "diatom_mat",
+      "taxon_query": "Bacillariophyceae",
+      "preferred_rank": "class",
+      "iconic_taxon_name": "Chromista",
+      "max_images": 200
+    }
+  ]
+}
