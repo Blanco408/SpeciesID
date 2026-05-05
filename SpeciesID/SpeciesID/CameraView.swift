@@ -292,9 +292,19 @@ struct CameraView: View {
                 }
 
                 // Notes field
-                TextField("Add notes (optional)", text: $notes)
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Field Notes", systemImage: "note.text")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.secondary)
+                    TextField(
+                        "Describe behavior, habitat, depth, conditions, group size…",
+                        text: $notes,
+                        axis: .vertical
+                    )
                     .textFieldStyle(.roundedBorder)
-                    .padding(.horizontal)
+                    .lineLimit(5...12)
+                }
+                .padding(.horizontal)
 
                 // Location
                 HStack {
