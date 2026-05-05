@@ -58,6 +58,42 @@ struct ClassificationResult {
     }
 }
 
+// MARK: - Classifier Thresholds (loaded from classifier_thresholds.json)
+
+/// Thresholds calibrated by `ml/scripts/evaluate_ood.py`. When the file is
+/// missing from the bundle we fall back to the historical hardcoded values.
+struct ClassifierThresholds: Codable {
+    let minimumDetectionConfidence: Double
+    let minimumTopMargin: Double
+    let maxEntropyRatio: Double
+    let energyThreshold: Double?
+    let nothingClassId: String?
+
+    static let fallback = ClassifierThresholds(
+        minimumDetectionConfidence: 0.55,
+        minimumTopMargin: 0.10,
+        maxEntropyRatio: 0.65,
+        energyThreshold: nil,
+        nothingClassId: "nothing"
+    )
+
+    static func loadFromBundle() -> ClassifierThresholds {
+        guard let url = Bundle.main.url(forResource: "classifier_thresholds", withExtension: "json") else {
+            print("classifier_thresholds.json not found in bundle, using fallback values")
+            return .fallback
+        }
+        do {
+            let data = try Data(contentsOf: url)
+            let value = try JSONDecoder().decode(ClassifierThresholds.self, from: data)
+            print("Loaded calibrated thresholds: conf>=\(value.minimumDetectionConfidence) margin>=\(value.minimumTopMargin) entropy<=\(value.maxEntropyRatio)")
+            return value
+        } catch {
+            print("Failed to decode classifier_thresholds.json: \(error). Using fallback.")
+            return .fallback
+        }
+    }
+}
+
 // MARK: - Species Metadata (loaded from species_metadata.json)
 
 struct SpeciesMetadataFile: Codable {
@@ -87,15 +123,29 @@ class SpeciesClassifierService: ObservableObject {
     private var vnModel: VNCoreMLModel?
     private var speciesMetadata: [String: SpeciesMetadataEntry] = [:]
 
-    private let minimumDetectionConfidence = 0.55
-    private let minimumTopMargin = 0.10
-    private let fullFrameFallbackConfidence = 0.50
+    private let thresholds: ClassifierThresholds
+    private let minimumDetectionConfidence: Double
+    private let minimumTopMargin: Double
+    private let fullFrameFallbackConfidence: Double
     private let maxDetections = 3
     private let overlapThreshold = 0.30
     /// Maximum entropy ratio (actual/uniform) above which we reject as "unknown"
-    private let maxEntropyRatio = 0.65
+    private let maxEntropyRatio: Double
+    /// Class ID the model uses to indicate "no recognized species in frame".
+    /// When the top prediction matches this, we treat it as no detection.
+    private let nothingClassId: String
 
     init() {
+        let loaded = ClassifierThresholds.loadFromBundle()
+        self.thresholds = loaded
+        self.minimumDetectionConfidence = loaded.minimumDetectionConfidence
+        self.minimumTopMargin = loaded.minimumTopMargin
+        // The full-frame fallback historically ran 0.05 below the windowed
+        // threshold; preserve that ratio so calibration translates cleanly.
+        self.fullFrameFallbackConfidence = max(0.0, loaded.minimumDetectionConfidence - 0.05)
+        self.maxEntropyRatio = loaded.maxEntropyRatio
+        self.nothingClassId = loaded.nothingClassId ?? "nothing"
+
         loadSpeciesMetadata()
         loadModel()
     }
@@ -154,6 +204,7 @@ class SpeciesClassifierService: ObservableObject {
         let maxDetections = self.maxDetections
         let overlapThreshold = self.overlapThreshold
         let maxEntropyRatio = self.maxEntropyRatio
+        let nothingClassId = self.nothingClassId
 
         let result: ClassificationResult? = await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
@@ -168,7 +219,8 @@ class SpeciesClassifierService: ObservableObject {
                     metadata: metadata,
                     minimumConfidence: fullFrameFallbackConfidence,
                     minimumTopMargin: minimumTopMargin,
-                    maxEntropyRatio: maxEntropyRatio
+                    maxEntropyRatio: maxEntropyRatio,
+                    nothingClassId: nothingClassId
                 ) {
                     detections.append(fallbackDetection)
                 }
@@ -193,7 +245,8 @@ class SpeciesClassifierService: ObservableObject {
                         metadata: metadata,
                         minimumConfidence: minimumDetectionConfidence,
                         minimumTopMargin: minimumTopMargin,
-                        maxEntropyRatio: maxEntropyRatio
+                        maxEntropyRatio: maxEntropyRatio,
+                        nothingClassId: nothingClassId
                     ) {
                         detections.append(detection)
                     }
@@ -221,8 +274,10 @@ class SpeciesClassifierService: ObservableObject {
     private func buildSupportedSpecies(from model: MLModel) -> [SupportedSpeciesItem] {
         let labels = model.modelDescription.classLabels?.compactMap { $0 as? String } ?? []
         let sourceLabels = labels.isEmpty ? Array(speciesMetadata.keys).sorted() : labels
+        let nothingId = self.nothingClassId
 
         return sourceLabels
+            .filter { $0 != nothingId }
             .map { speciesId in
                 let entry = speciesMetadata[speciesId]
                 return SupportedSpeciesItem(
@@ -291,9 +346,17 @@ class SpeciesClassifierService: ObservableObject {
         metadata: [String: SpeciesMetadataEntry],
         minimumConfidence: Double,
         minimumTopMargin: Double,
-        maxEntropyRatio: Double = 0.75
+        maxEntropyRatio: Double = 0.75,
+        nothingClassId: String = "nothing"
     ) -> SpeciesDetection? {
         guard let top = observations.first else {
+            return nil
+        }
+
+        // Explicit-abstain: model voted for the "nothing" class. Reject the
+        // detection regardless of how confident it is. This must come BEFORE
+        // the threshold checks below.
+        if top.identifier == nothingClassId {
             return nil
         }
 
@@ -302,9 +365,11 @@ class SpeciesClassifierService: ObservableObject {
             return nil
         }
 
+        // Find the next species observation, skipping any "nothing" entry so
+        // the margin comparison stays meaningful.
         let secondConfidence = observations
             .dropFirst()
-            .first
+            .first(where: { $0.identifier != nothingClassId })
             .map { min(max(Double($0.confidence), 0.0), 1.0) } ?? 0.0
         let margin = confidence - secondConfidence
         guard margin >= minimumTopMargin else {
@@ -324,13 +389,17 @@ class SpeciesClassifierService: ObservableObject {
             }
         }
 
-        let alternatives = observations.dropFirst().prefix(2).map {
-            AlternativePrediction(
-                speciesId: $0.identifier,
-                displayName: metadata[$0.identifier]?.displayName ?? Self.prettifySpeciesName($0.identifier),
-                confidence: min(max(Double($0.confidence), 0.0), 1.0)
-            )
-        }
+        let alternatives = observations
+            .dropFirst()
+            .filter { $0.identifier != nothingClassId }
+            .prefix(2)
+            .map {
+                AlternativePrediction(
+                    speciesId: $0.identifier,
+                    displayName: metadata[$0.identifier]?.displayName ?? Self.prettifySpeciesName($0.identifier),
+                    confidence: min(max(Double($0.confidence), 0.0), 1.0)
+                )
+            }
 
         return SpeciesDetection(
             id: UUID(),
@@ -338,7 +407,7 @@ class SpeciesClassifierService: ObservableObject {
             displayName: metadata[top.identifier]?.displayName ?? Self.prettifySpeciesName(top.identifier),
             confidence: confidence,
             boundingBox: boundingBox,
-            alternatives: alternatives
+            alternatives: Array(alternatives)
         )
     }
 

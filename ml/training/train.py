@@ -8,6 +8,8 @@ Usage:
     python -m ml.training.train --architecture efficientnet_b0 --experiment-name effnet_run1
 """
 
+import csv
+import itertools
 import os
 import sys
 import argparse
@@ -18,7 +20,9 @@ from datetime import datetime, timezone
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+import torch.nn.functional as F
+from PIL import Image
+from torch.utils.data import DataLoader, Dataset
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
@@ -34,8 +38,86 @@ from ml.training.dataset import (
     get_train_transforms,
     get_val_transforms,
 )
-from ml.training.model import create_model, SUPPORTED_ARCHITECTURES
+from ml.training.model import (
+    create_model,
+    expand_classifier_head,
+    load_trained_model,
+    SUPPORTED_ARCHITECTURES,
+)
 from ml.training.metrics import compute_metrics, compute_macro_f1
+
+
+class OutlierExposureDataset(Dataset):
+    """Yields just images (no labels) from a path-only manifest CSV.
+
+    Used for the Outlier Exposure auxiliary loss: every batch from this dataset
+    pushes the species classifier toward a uniform distribution over classes,
+    which generalizes to "treat unfamiliar inputs as low-confidence" at test
+    time. Images here MUST be disjoint from the `nothing`-class rows in the
+    main split CSVs to avoid the OE signal collapsing into rote memorization.
+    """
+
+    def __init__(self, csv_path: str, transform):
+        self.transform = transform
+        self.paths: list[str] = []
+        with open(csv_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                p = (row.get("image_path") or "").strip()
+                if p and os.path.exists(p):
+                    self.paths.append(p)
+
+    def __len__(self) -> int:
+        return len(self.paths)
+
+    def __getitem__(self, idx: int):
+        img = Image.open(self.paths[idx]).convert("RGB")
+        if self.transform:
+            img = self.transform(img)
+        return img
+
+
+def _build_init_from_model(
+    checkpoint_path: str,
+    architecture: str,
+    new_class_to_idx: dict,
+) -> nn.Module:
+    """Load an existing checkpoint and grow the head to match new_class_to_idx.
+
+    Assumes new_class_to_idx is the alphabetically-sorted superset of the
+    checkpoint's class map (i.e. every old class is still present). Computes
+    the indices of newly-added classes (e.g. `nothing`) and seeds them via
+    expand_classifier_head.
+    """
+    print(f"Initializing from checkpoint: {checkpoint_path}")
+    old_model, old_class_to_idx = load_trained_model(
+        checkpoint_path,
+        device="cpu",
+        return_class_mapping=True,
+        architecture=architecture,
+    )
+
+    missing = [name for name in old_class_to_idx if name not in new_class_to_idx]
+    if missing:
+        raise ValueError(
+            f"--init-from checkpoint contains classes not present in the new "
+            f"split: {missing}. Refusing to drop weights silently."
+        )
+
+    new_indices = sorted(
+        idx for name, idx in new_class_to_idx.items() if name not in old_class_to_idx
+    )
+    added_names = sorted(name for name in new_class_to_idx if name not in old_class_to_idx)
+    print(f"  carrying over {len(old_class_to_idx)} classes from checkpoint")
+    print(f"  adding {len(added_names)} new classes: {added_names}")
+    print(f"  new class indices: {new_indices}")
+
+    expand_classifier_head(
+        old_model,
+        new_num_classes=len(new_class_to_idx),
+        new_class_indices=new_indices,
+    )
+    return old_model
 
 ML_DIR = os.path.join(PROJECT_ROOT, "ml")
 DEFAULT_SPLITS_DIR = os.path.join(ML_DIR, "data", "splits")
@@ -58,12 +140,40 @@ def compute_class_weights(dataset: SpeciesDataset, num_classes: int) -> torch.Te
     return torch.FloatTensor(weights)
 
 
-def train_one_epoch(model, loader, criterion, optimizer, device, scaler=None):
-    """Train for one epoch. Returns average loss and accuracy."""
+def _oe_loss(logits: torch.Tensor) -> torch.Tensor:
+    """Outlier Exposure loss: pushes the softmax toward uniform.
+
+    Equivalent (up to an additive constant) to KL(softmax(logits) || U). Lower
+    is better when the input is OOD. Mean is over both batch and class dims so
+    the magnitude is comparable to per-element CE.
+    """
+    return -F.log_softmax(logits, dim=1).mean()
+
+
+def train_one_epoch(
+    model,
+    loader,
+    criterion,
+    optimizer,
+    device,
+    scaler=None,
+    oe_loader=None,
+    oe_weight: float = 0.0,
+):
+    """Train for one epoch. Returns average loss and accuracy.
+
+    If oe_loader is provided, each step also draws a batch from it and adds
+    `oe_weight * _oe_loss(model(oe_batch))` to the loss. The OE loader cycles
+    independently so it can be smaller than the main loader.
+    """
     model.train()
     running_loss = 0.0
+    running_ce = 0.0
+    running_oe = 0.0
     correct = 0
     total = 0
+
+    oe_iter = itertools.cycle(oe_loader) if (oe_loader is not None and oe_weight > 0) else None
 
     for images, labels in loader:
         images, labels = images.to(device), labels.to(device)
@@ -73,24 +183,44 @@ def train_one_epoch(model, loader, criterion, optimizer, device, scaler=None):
         if scaler is not None:
             with torch.amp.autocast("cuda"):
                 outputs = model(images)
-                loss = criterion(outputs, labels)
+                ce_loss = criterion(outputs, labels)
+                if oe_iter is not None:
+                    oe_images = next(oe_iter).to(device, non_blocking=True)
+                    oe_logits = model(oe_images)
+                    oe_loss = _oe_loss(oe_logits)
+                    loss = ce_loss + oe_weight * oe_loss
+                else:
+                    oe_loss = torch.tensor(0.0, device=device)
+                    loss = ce_loss
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
         else:
             outputs = model(images)
-            loss = criterion(outputs, labels)
+            ce_loss = criterion(outputs, labels)
+            if oe_iter is not None:
+                oe_images = next(oe_iter).to(device, non_blocking=True)
+                oe_logits = model(oe_images)
+                oe_loss = _oe_loss(oe_logits)
+                loss = ce_loss + oe_weight * oe_loss
+            else:
+                oe_loss = torch.tensor(0.0, device=device)
+                loss = ce_loss
             loss.backward()
             optimizer.step()
 
         running_loss += loss.item() * images.size(0)
+        running_ce += ce_loss.item() * images.size(0)
+        running_oe += oe_loss.item() * images.size(0)
         _, predicted = outputs.max(1)
         total += labels.size(0)
         correct += predicted.eq(labels).sum().item()
 
     avg_loss = running_loss / total
     accuracy = correct / total
-    return avg_loss, accuracy
+    avg_ce = running_ce / total
+    avg_oe = running_oe / total
+    return avg_loss, accuracy, avg_ce, avg_oe
 
 
 @torch.no_grad()
@@ -199,7 +329,35 @@ def main():
         default=None,
         help="Experiment name; if provided, outputs go to ml/models/{experiment_name}/",
     )
+    parser.add_argument(
+        "--init-from",
+        default=None,
+        help="Path to a checkpoint to fine-tune from. The classifier head is "
+             "expanded to match the current split's class set; new classes "
+             "(e.g. 'nothing') get a mean-of-existing prior.",
+    )
+    parser.add_argument(
+        "--oe-csv",
+        default=None,
+        help="Path to an Outlier Exposure manifest (image_path column). Adds "
+             "an auxiliary loss that pushes OOD inputs toward uniform output.",
+    )
+    parser.add_argument(
+        "--oe-weight",
+        type=float,
+        default=0.5,
+        help="Weight on the Outlier Exposure auxiliary loss",
+    )
     args = parser.parse_args()
+
+    # Sensible defaults when fine-tuning: lower LR, fewer epochs, tighter patience.
+    if args.init_from:
+        if "--lr" not in sys.argv:
+            args.lr = 2e-5
+        if "--epochs" not in sys.argv:
+            args.epochs = 10
+        if "--patience" not in sys.argv:
+            args.patience = 4
 
     # Override output dir if experiment name is provided
     if args.experiment_name:
@@ -263,11 +421,38 @@ def main():
         num_workers=args.num_workers, pin_memory=True,
     )
 
+    # Optional Outlier Exposure dataloader
+    oe_loader = None
+    if args.oe_csv and args.oe_weight > 0:
+        if not os.path.exists(args.oe_csv):
+            print(f"ERROR: --oe-csv not found: {args.oe_csv}")
+            sys.exit(1)
+        oe_dataset = OutlierExposureDataset(args.oe_csv, transform=get_train_transforms())
+        if len(oe_dataset) == 0:
+            print(f"WARNING: OE dataset at {args.oe_csv} is empty; disabling OE")
+        else:
+            print(f"OE pool: {len(oe_dataset)} images (weight={args.oe_weight})")
+            oe_loader = DataLoader(
+                oe_dataset,
+                batch_size=args.batch_size,
+                shuffle=True,
+                num_workers=max(1, args.num_workers // 2),
+                pin_memory=True,
+                drop_last=True,
+            )
+
     # Model
-    print(f"\nCreating {args.architecture} (pretrained=True, classes={num_classes})")
-    model = create_model(
-        num_classes=num_classes, pretrained=True, architecture=args.architecture
-    )
+    if args.init_from:
+        model = _build_init_from_model(
+            checkpoint_path=args.init_from,
+            architecture=args.architecture,
+            new_class_to_idx=class_to_idx,
+        )
+    else:
+        print(f"\nCreating {args.architecture} (pretrained=True, classes={num_classes})")
+        model = create_model(
+            num_classes=num_classes, pretrained=True, architecture=args.architecture
+        )
     model = model.to(device)
 
     # Class weights for imbalanced data
@@ -306,8 +491,9 @@ def main():
             for param_group in optimizer.param_groups:
                 param_group["lr"] = warmup_lr
 
-        train_loss, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, scaler
+        train_loss, train_acc, train_ce, train_oe = train_one_epoch(
+            model, train_loader, criterion, optimizer, device, scaler,
+            oe_loader=oe_loader, oe_weight=args.oe_weight,
         )
         val_loss, val_acc, per_class, macro_f1 = validate(
             model,
@@ -330,8 +516,9 @@ def main():
         val_accs.append(val_acc)
 
         # Print epoch results
+        oe_part = f" (CE: {train_ce:.4f} OE: {train_oe:.4f})" if oe_loader is not None else ""
         print(f"Epoch {epoch:3d}/{args.epochs} | "
-              f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
+              f"Train Loss: {train_loss:.4f}{oe_part} Acc: {train_acc:.4f} | "
               f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f} F1: {macro_f1:.4f} | "
               f"LR: {lr:.6f} | {elapsed:.1f}s")
 
@@ -404,6 +591,10 @@ def main():
             "label_smoothing": args.label_smoothing,
             "patience": args.patience,
             "warmup_epochs": args.warmup_epochs,
+            "init_from": args.init_from,
+            "oe_csv": args.oe_csv,
+            "oe_weight": args.oe_weight if oe_loader is not None else 0.0,
+            "oe_pool_size": (len(oe_loader.dataset) if oe_loader is not None else 0),
         },
         "training_time_seconds": round(training_time_seconds, 2),
         "timestamp": datetime.now(timezone.utc).isoformat(),

@@ -7,70 +7,210 @@
       "taxon_query": "Aurelia aurita",
       "preferred_rank": "species",
       "iconic_taxon_name": "Animalia",
-      "max_images": 30
+      "max_images": 200
     },
     {
       "label": "sea_otter",
       "taxon_query": "Enhydra lutris",
       "preferred_rank": "species",
       "iconic_taxon_name": "Mammalia",
-      "max_images": 30
+      "max_images": 200
     },
     {
       "label": "harbor_seal",
       "taxon_query": "Phoca vitulina",
       "preferred_rank": "species",
       "iconic_taxon_name": "Mammalia",
-      "max_images": 30
+      "max_images": 200
     },
     {
       "label": "leopard_shark",
       "taxon_query": "Triakis semifasciata",
       "preferred_rank": "species",
       "iconic_taxon_name": "Actinopterygii",
-      "max_images": 30
+      "max_images": 200
     },
     {
       "label": "kelp_bass",
       "taxon_query": "Paralabrax clathratus",
       "preferred_rank": "species",
       "iconic_taxon_name": "Actinopterygii",
-      "max_images": 30
+      "max_images": 200
     },
     {
       "label": "garibaldi",
       "taxon_query": "Hypsypops rubicundus",
       "preferred_rank": "species",
       "iconic_taxon_name": "Actinopterygii",
-      "max_images": 30
+      "max_images": 200
     },
     {
       "label": "california_lobster",
       "taxon_query": "Panulirus interruptus",
       "preferred_rank": "species",
       "iconic_taxon_name": "Animalia",
-      "max_images": 30
+      "max_images": 200
     },
     {
       "label": "giant_pacific_chiton",
       "taxon_query": "Cryptochiton stelleri",
       "preferred_rank": "species",
       "iconic_taxon_name": "Animalia",
-      "max_images": 30
+      "max_images": 200
     },
     {
       "label": "sand_dollar",
       "taxon_query": "Dendraster excentricus",
       "preferred_rank": "species",
       "iconic_taxon_name": "Animalia",
-      "max_images": 30
+      "max_images": 200
     },
     {
       "label": "common_octopus",
       "taxon_query": "Octopus vulgaris",
       "preferred_rank": "species",
       "iconic_taxon_name": "Animalia",
-      "max_images": 30
+      "max_images": 200
+    },
+    {
+      "label": "opaleye",
+      "taxon_query": "Girella nigricans",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "senorita_fish",
+      "taxon_query": "Oxyjulis californica",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "blacksmith_fish",
+      "taxon_query": "Chromis punctipinnis",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "sheephead",
+      "taxon_query": "Semicossyphus pulcher",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "rockfish",
+      "taxon_query": "Sebastes",
+      "preferred_rank": "genus",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "lingcod",
+      "taxon_query": "Ophiodon elongatus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "cabezon",
+      "taxon_query": "Scorpaenichthys marmoratus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "stingray",
+      "taxon_query": "Myliobatis californica",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "swell_shark",
+      "taxon_query": "Cephaloscyllium ventriosum",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "horn_shark",
+      "taxon_query": "Heterodontus francisci",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "bay_pipefish",
+      "taxon_query": "Syngnathus leptorhynchus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Actinopterygii",
+      "max_images": 200
+    },
+    {
+      "label": "by_the_wind_sailor",
+      "taxon_query": "Velella velella",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 200
+    },
+    {
+      "label": "sea_nettle",
+      "taxon_query": "Chrysaora fuscescens",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 200
+    },
+    {
+      "label": "feather_duster_worm",
+      "taxon_query": "Eudistylia polymorpha",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 200
+    },
+    {
+      "label": "pisaster_brevispinus",
+      "taxon_query": "Pisaster brevispinus",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 200
+    },
+    {
+      "label": "sunflower_star",
+      "taxon_query": "Pycnopodia helianthoides",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 200
+    },
+    {
+      "label": "leather_star",
+      "taxon_query": "Dermasterias imbricata",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 200
+    },
+    {
+      "label": "blue_top_snail",
+      "taxon_query": "Calliostoma ligatum",
+      "preferred_rank": "species",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 200
+    },
+    {
+      "label": "limpet_lottia",
+      "taxon_query": "Lottia",
+      "preferred_rank": "genus",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 200
+    },
+    {
+      "label": "scallop",
+      "taxon_query": "Pecten",
+      "preferred_rank": "genus",
+      "iconic_taxon_name": "Animalia",
+      "max_images": 200
     }
   ]
 }
