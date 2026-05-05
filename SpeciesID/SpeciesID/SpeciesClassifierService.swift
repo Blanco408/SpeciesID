@@ -87,7 +87,13 @@ class SpeciesClassifierService: ObservableObject {
     private var vnModel: VNCoreMLModel?
     private var speciesMetadata: [String: SpeciesMetadataEntry] = [:]
 
-    private let minimumDetectionConfidence = 0.55
+    static let confidenceThresholdKey = "confidenceThreshold"
+    static let defaultMinimumConfidence = 0.55
+
+    private var minimumDetectionConfidence: Double {
+        let stored = UserDefaults.standard.double(forKey: Self.confidenceThresholdKey)
+        return stored > 0 ? stored : Self.defaultMinimumConfidence
+    }
     private let minimumTopMargin = 0.10
     private let fullFrameFallbackConfidence = 0.50
     private let maxDetections = 3
